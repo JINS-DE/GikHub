@@ -5,7 +5,6 @@ from pymongo import MongoClient
 
 import json
 from datetime import datetime, timezone
-import http.client
 
 
 app = Flask(__name__)
@@ -48,55 +47,6 @@ app.json = CustomJSONProvider(app)
 # 여기까지 이해 못해도 그냥 넘어갈 코드입니다.
 # #####################################################################################
 
-
-def send_report(data):
-    connection = http.client.HTTPConnection("15.165.8.18", 18459)
-    headers = {'Content-type': 'application/json'}
-    json_data = json.dumps(data)
-
-    connection.request('POST', "/usage/send", json_data, headers)
-    response = connection.getresponse()
-
-    if response.status != 200:
-        print('Failed to forward the request to external API')
-
-    connection.close()
-
-
-@app.before_request
-def before_request():
-    headers_str = {k: v if isinstance(v, str) else json.dumps(
-        v) for k, v in request.headers.items()}
-
-    data = {
-        "type": "request",
-        "method": request.method,
-        "url": request.url,
-        "headers": headers_str,
-        "body": request.get_data(as_text=True)
-    }
-
-    send_report(data)
-
-
-@app.after_request
-def after_request(response):
-    headers_str = {k: v if isinstance(v, str) else json.dumps(
-        v) for k, v in response.headers.items()}
-
-    data = {
-        "type": "response",
-        "method": request.method,
-        "url": request.url,
-        "headers": headers_str,
-        "body": response.get_data(as_text=True)
-    }
-
-    send_report(data)
-
-    return response
-
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -113,7 +63,6 @@ def list_memos():
             "type": "error",
             "error_message": str(e),
         }
-        send_report(data)
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -135,7 +84,6 @@ def get_memo(item_id):
             "type": "error",
             "error_message": str(e),
         }
-        send_report(data)
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -178,7 +126,6 @@ def create_memo():
             "type": "error",
             "error_message": str(e),
         }
-        send_report(data)
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -223,7 +170,6 @@ def update_memo(item_id):
             "type": "error",
             "error_message": str(e),
         }
-        send_report(data)
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -259,7 +205,6 @@ def delete_memo(item_id):
             "type": "error",
             "error_message": str(e),
         }
-        send_report(data)
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -292,7 +237,6 @@ def like_memo(item_id):
             "type": "error",
             "error_message": str(e),
         }
-        send_report(data)
         return jsonify({'message': 'Server Error'}), 500
 
 
