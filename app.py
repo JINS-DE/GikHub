@@ -164,13 +164,13 @@ def detail_board(item_id):
 
         item = db.items.find_one(
             {'_id': ObjectId(item_id), 'deletedAt': None})
-
+        # todo 토큰으로 변경이 필요합니다.
+        userId="userId"
         if item is None:
             return jsonify({'message': 'Item not found'}), 404
+        is_author = str(item['userId']) == userId
 
-        # userId=db.users.find_one({'_id': item['user_id']}, {'id':1,'_id':0})
-
-        return render_template('board_detail.html',item=item, userId="userId['id']")
+        return render_template('board_detail.html',item=item,is_author=is_author, userId="userId['id']")
     except Exception as e:
         data = {
             "type": "error",
@@ -227,6 +227,35 @@ def create_board():
             "error_message": str(e),
         }
         return jsonify({'message': 'Server Error'}), 500
+
+
+@app.route('/api/boards/<item_id>', methods=['DELETE'])
+def delete_boards(item_id):
+     try:
+         if not ObjectId.is_valid(item_id):
+             return jsonify({'message': 'Invalid item ID'}), 400
+
+         now = datetime.now(timezone.utc)
+
+         result = db.items.update_one({'_id': ObjectId(item_id), 'deletedAt': None}, {
+             '$set': {
+                 'deletedAt': now,
+             }
+         })
+
+         if result.matched_count == 0:
+             return jsonify({"message": "Item not found"}), 404
+         elif result.modified_count == 0:
+             return jsonify({"message": "No changes made to the item"}), 200
+         else:
+             return jsonify({"message": "Item deleted successfully"})
+     except Exception as e:
+         data = {
+             "type": "error",
+             "error_message": str(e),
+         }
+         return jsonify({'message': 'Server Error'}), 500
+
 
 @app.route('/api/boards/status/<item_id>', methods=['PATCH'])
 def update_status(item_id):
