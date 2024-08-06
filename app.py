@@ -2,16 +2,14 @@ from flask import Flask, jsonify, render_template, request
 from flask.json.provider import JSONProvider
 from bson import ObjectId
 from pymongo import MongoClient
-import socketio
+from flask_socketio import SocketIO
 
 import json
 from datetime import datetime, timezone
 
 
 app = Flask(__name__)
-sio = socketio.Server()
-
-app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
+socketio = SocketIO(app)
 
 client = MongoClient('localhost', 27017)
 db = client.gikhub
@@ -38,6 +36,12 @@ app.json = CustomJSONProvider(app)
 @app.route('/')
 def home():
     return render_template('index.html')
+
+
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
 
 @app.route('/chatting')
 def chat_room():
@@ -224,14 +228,31 @@ def like_memo(item_id):
         }
         return jsonify({'message': 'Server Error'}), 500
 
-@sio.event
-def connect(sid, environ):
-    print('connect ', sid)
 
-@sio.event
-def disconnect(sid):
-    print('disconnect ', sid)
+@socketio.on('connect')
+def handle_connect():
+    client_id = request.sid
+    print(f'Client connected: {client_id}')
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    client_id = request.sid
+    print(f'Client disconnected: {client_id}')
+
+
+@socketio.on('error')
+def handle_error(e):
+    client_id = request.sid
+    print(f'An error has occurred on {client_id}: {str(e)}')
+
+
+@socketio.on('send_message')
+def handle_send_message(message):
+    client_id = request.sid
+    socketio.emit('reply', {"sid": client_id, "message": message})
+    print(f'Received message: {message} from {client_id}')
 
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000)
