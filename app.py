@@ -29,12 +29,12 @@ room_user_counts = {}
 user_rooms = {}
 
 # test DB를 위한 코드입니다
-ca = certifi.where()
-client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
+# ca = certifi.where()
+# client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
 ###############################################
 # todo: 서버에 올릴때 꼭 주석 제거 production용 DB
+client = MongoClient('localhost', 27017)
 
-# client = MongoClient('localhost', 27017)
 socketio = SocketIO(app)
 
 
