@@ -13,20 +13,8 @@ sio = socketio.Server()
 
 app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
 
-# uri = "mongodb://mongoadmin:secret@localhost:27017"
-# client = MongoClient(uri)
-# db = client.dbjungle
-
 client = MongoClient('localhost', 27017)
-db = client.dbjungle
-
-#####################################################################################
-# 이 부분은 코드를 건드리지 말고 그냥 두세요. 코드를 이해하지 못해도 상관없는 부분입니다.
-#
-# ObjectId 타입으로 되어있는 _id 필드는 Flask 의 jsonify 호출시 문제가 된다.
-# 이를 처리하기 위해서 기본 JsonEncoder 가 아닌 custom encoder 를 사용한다.
-# Custom encoder 는 다른 부분은 모두 기본 encoder 에 동작을 위임하고 ObjectId 타입만 직접 처리한다.
-
+db = client.gikhub
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -44,16 +32,16 @@ class CustomJSONProvider(JSONProvider):
     def loads(self, s, **kwargs):
         return json.loads(s, **kwargs)
 
-
-# 위에 정의되 custom encoder 를 사용하게끔 설정한다.
 app.json = CustomJSONProvider(app)
 
-# 여기까지 이해 못해도 그냥 넘어갈 코드입니다.
-# #####################################################################################
 
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/chatting')
+def chat_room():
+    return render_template('chatting.html')
 
 
 @app.route('/api/memos', methods=['GET'])
@@ -182,13 +170,6 @@ def delete_memo(item_id):
     try:
         if not ObjectId.is_valid(item_id):
             return jsonify({'message': 'Invalid item ID'}), 400
-
-        # result = db.memos.delete_one({'_id': ObjectId(item_id)})
-
-        # if result.deleted_count == 0:
-        #     return jsonify({'message': 'Item not found'}), 404
-
-        # return jsonify({'message': 'Item deleted successfully'})
 
         now = datetime.now(timezone.utc)
 
