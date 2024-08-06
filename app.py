@@ -241,6 +241,36 @@ def create_board():
         }
         return jsonify({'message': 'Server Error'}), 500
 
+@app.route('/api/boards/status/<item_id>', methods=['PATCH'])
+def update_status(item_id):
+     try:
+         print(item_id)
+         if not ObjectId.is_valid(item_id):
+             return jsonify({'message': 'Invalid item ID'}), 400
+         print(item_id)
+         data = request.json
+         if not data:
+            return jsonify({"message": "No data provided"}), 400
+         now = datetime.now(timezone.utc)
+         print(data.get('status'))
+         result = db.items.update_one(
+             {'_id': ObjectId(item_id), 'deletedAt': None},
+             {
+                 '$set': { 'updatedAt': now,'status': data.get('status')},
+             })
+
+         if result.matched_count == 0:
+             return jsonify({"message": "Item not found"}), 404
+         elif result.modified_count == 0:
+             return jsonify({"message": "No changes made to the item"}), 200
+         else:
+             return jsonify({"message": "Item updated successfully"})
+     except Exception as e:
+         data = {
+             "type": "error",
+             "error_message": str(e),
+         }
+         return jsonify({'message': 'Server Error'}), 500
 
 @socketio.on('connect')
 def handle_connect():
