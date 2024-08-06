@@ -21,12 +21,17 @@
   <!-- 추가적인 물품 요청 글들이 여기에 들어갑니다. -->
 </div>
 
-<!-- Pagination Section -->
+<!-- 페이지 네이션 -->
 <div id="pagination" class="flex justify-center my-4">
-  <!-- 페이지네이션 버튼을 여기에 동적으로 추가합니다. -->
-  <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">1</button>
-  <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">2</button>
-  <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">3</button>
+{% if page > 1 %}
+  <a href="/?page={{ page - 1 }}" class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">이전</a>
+  {% endif %}
+  {% for p in range(1, total_pages + 1) %}
+  <a href="/?page={{ p }}" class="mx-1 px-3 py-1 {% if p == page %}bg-blue-700{% else %}bg-blue-500{% endif %} text-white rounded">{{ p }}</a>
+  {% endfor %}
+  {% if page < total_pages %}
+  <a href="/?page={{ page + 1 }}" class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">다음</a>
+  {% endif %}
 </div>
 
 <div id="createButton" class="flex flex-row-reverse my-4">
