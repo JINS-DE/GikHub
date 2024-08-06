@@ -230,34 +230,143 @@ def create_board():
 
 @app.route('/api/boards/status/<item_id>', methods=['PATCH'])
 def update_status(item_id):
-     try:
-         print(item_id)
-         if not ObjectId.is_valid(item_id):
-             return jsonify({'message': 'Invalid item ID'}), 400
-         print(item_id)
-         data = request.json
-         if not data:
+    try:
+        print(item_id)
+        if not ObjectId.is_valid(item_id):
+            return jsonify({'message': 'Invalid item ID'}), 400
+        print(item_id)
+        data = request.json
+        if not data:
             return jsonify({"message": "No data provided"}), 400
-         now = datetime.now(timezone.utc)
-         print(data.get('status'))
-         result = db.items.update_one(
-             {'_id': ObjectId(item_id), 'deletedAt': None},
-             {
-                 '$set': { 'updatedAt': now,'status': data.get('status')},
-             })
+        now = datetime.now(timezone.utc)
+        print(data.get('status'))
+        result = db.items.update_one(
+            {'_id': ObjectId(item_id), 'deletedAt': None},
+            {
+                '$set': { 'updatedAt': now,'status': data.get('status')},
+            })
 
-         if result.matched_count == 0:
-             return jsonify({"message": "Item not found"}), 404
-         elif result.modified_count == 0:
-             return jsonify({"message": "No changes made to the item"}), 200
-         else:
-             return jsonify({"message": "Item updated successfully"})
-     except Exception as e:
-         data = {
-             "type": "error",
-             "error_message": str(e),
-         }
-         return jsonify({'message': 'Server Error'}), 500
+        if result.matched_count == 0:
+            return jsonify({"message": "Item not found"}), 404
+        elif result.modified_count == 0:
+            return jsonify({"message": "No changes made to the item"}), 200
+        else:
+            return jsonify({"message": "Item updated successfully"})
+    except Exception as e:
+        data = {
+            "type": "error",
+            "error_message": str(e),
+        }
+        return jsonify({'message': 'Server Error'}), 500
+
+
+@app.route('/api/chats', methods=['GET'])
+def list_chats():
+    try:
+        data = request.json
+
+        userId = data.get("userId")
+
+        if not userId:
+            return jsonify({"message": "Missing 'userId' in request"}), 400
+
+        items = list(
+            db.chat_rooms.find(
+                {
+                    'deletedAt': None,
+                    'participants': {
+                        '$elemMatch': {'userId': userId}
+                    }
+                },
+                {'itemId': 1, 'participants': 1, 'messages': 1, 'updatedAt': 1}
+            ).sort([('updatedAt', -1)])
+        )
+        return jsonify(items)
+    except Exception as e:
+        print(str(e))
+        return jsonify({'message': 'Server Error'}), 500
+
+
+@app.route('/api/chats', methods=['POST'])
+def create_chat():
+    try:
+        data = request.json
+
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+
+        itemId = data.get('itemId')
+        senderId = data.get('senderId')
+        receiverId = data.get('receiverId')
+
+        if not itemId:
+            return jsonify({"message": "Missing 'itemId' in request"}), 400
+
+        if not senderId:
+            return jsonify({"message": "Missing 'senderId' in request"}), 400
+
+        if not receiverId:
+            return jsonify({"message": "Missing 'receiverId' in request"}), 400
+
+        now = datetime.now(timezone.utc)
+
+        result = db.chat_rooms.insert_one(
+            {
+                'itemId': itemId,
+                'participants': [
+                    {"userId": senderId, "unreadCount": 0},
+                    {"userId": receiverId, "unreadCount": 0}
+                ],
+                'messages': [],
+                'createdAt': now,
+                'updatedAt': now,
+                'deletedAt': None,
+            }
+        )
+
+        return jsonify({'_id': str(result.inserted_id)}), 201
+    except Exception as e:
+        print(str(e))
+        return jsonify({'message': 'Server Error'}), 500
+
+
+@app.route('/api/chat/messages', methods=['POST'])
+def create_chat_message():
+    try:
+        data = request.json
+
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+
+        chatId = data.get('chatId')
+        userId = data.get('userId')
+        message = data.get('message')
+
+        now = datetime.now(timezone.utc)
+
+        result = db.chat_rooms.update_one(
+            { '_id': ObjectId(chatId) },
+            {
+                '$push': {
+                    'messages': {
+                        'userId': userId,
+                        'message': message,
+                        'createdAt': now
+                    }
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            return jsonify({'message': 'Item not found'}), 404
+        elif result.modified_count == 0:
+            return jsonify({'message': 'No changes made to the item'}), 200
+        else:
+            return jsonify({'message': 'Item updated successfully'})
+    except Exception as e:
+        print(str(e))
+        return jsonify({'message': 'Server Error'}), 500
+
 
 @socketio.on('connect')
 def handle_connect():
