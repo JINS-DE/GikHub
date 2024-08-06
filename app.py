@@ -5,23 +5,23 @@ from pymongo import MongoClient
 import socketio
 from enum import Enum
 import certifi
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, join_room, leave_room, send, emit
 
 import json
 from datetime import datetime, timezone
 
 
 app = Flask(__name__)
-sio = socketio.Server()
+socketio = SocketIO(app)
 
-app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
+room_user_counts = {}
+user_rooms = {}
+
 # test DB를 위한 코드입니다
 # ca = certifi.where()
 # client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
 ###############################################
 # todo: 서버에 올릴때 꼭 주석 제거 production용 DB
-
-socketio = SocketIO(app)
 
 client = MongoClient('localhost', 27017)
 
@@ -190,6 +190,12 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     client_id = request.sid
+    room = user_rooms.get(client_id)  # 연결이 끊긴 유저의 방 정보 가져오기
+    if room:
+        leave_room(room)
+        room_user_counts[room] = room_user_counts.get(room, 1) - 1
+        emit('room_user_count', {'room': room, 'count': room_user_counts[room]}, broadcast=True)
+        del user_rooms[client_id]
     print(f'Client disconnected: {client_id}')
 
 
@@ -199,11 +205,38 @@ def handle_error(e):
     print(f'An error has occurred on {client_id}: {str(e)}')
 
 
+@socketio.on('join_room')
+def on_join(data):
+    room = data['room']
+    if room_user_counts.get(room, 0) < 2:  # 방의 최대 인원은 2명
+        join_room(room)
+        room_user_counts[room] = room_user_counts.get(room, 0) + 1
+        user_rooms[request.sid] = room
+        emit('room_user_count', {'room': room, 'count': room_user_counts[room]}, broadcast=True)
+    else:
+        emit('join_error', {'message': 'This room is full.'})  # 방이 가득 찼을 때 클라이언트에게 에러 메시지 전송
+
+
+@socketio.on('leave_room')
+def on_leave(data):
+    room = data['room']
+    leave_room(room)
+    room_user_counts[room] = room_user_counts.get(room, 1) - 1
+    emit('room_user_count', {'room': room, 'count': room_user_counts[room]}, broadcast=True)
+    del user_rooms[request.sid]
+    print(f'User left room: {room}')
+
+
 @socketio.on('send_message')
-def handle_send_message(message):
+def handle_send_message(data):
     client_id = request.sid
-    socketio.emit('reply', {"sid": client_id, "message": message})
-    print(f'Received message: {message} from {client_id}')
+    room = user_rooms.get('room')
+    if room:
+        emit('reply', {"sid": client_id, "message": data["message"]}, room=room)
+        print(f'Received message: {data["message"]} from {client_id} in room {room}')
+    else:
+        emit('error', {'message': 'No room specified'}, to=client_id)
+        print(f'Error: No room specified for message: {data["message"]} from {client_id}')
 
 
 if __name__ == '__main__':
