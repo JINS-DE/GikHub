@@ -29,11 +29,12 @@ room_user_counts = {}
 user_rooms = {}
 
 # test DB를 위한 코드입니다
-# ca = certifi.where()
-# client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
+ca = certifi.where()
+client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
 ###############################################
 # todo: 서버에 올릴때 꼭 주석 제거 production용 DB
-client = MongoClient('localhost', 27017)
+# client = MongoClient('localhost', 27017)
+
 
 socketio = SocketIO(app)
 
@@ -65,13 +66,19 @@ app.json = CustomJSONProvider(app)
 @app.route('/' , methods=['GET'])
 def render_home():
     try:
+        page=int(request.args.get('page',1))
+        per_page=int(request.args.get('per_page',5))
+        skip=(page-1)*per_page
         items = list(db.items.find(
-            {'deletedAt': None}, {'title': 1, 'content': 1, 'status':1}).sort([('createDate',1)]))
+            {'deletedAt': None}, {'title': 1, 'status':1}).sort([('createdAt',-1)]).skip(skip).limit(per_page))
 
         for item in items:
             # todo 토큰 변경 필요
             item['user_id']="임시 닉네임"
-        return render_template('index.html',items=items)
+
+        total_items = db.items.count_documents({'deletedAt': None})
+        total_pages = (total_items + per_page - 1) // per_page  # 총 페이지 수
+        return render_template('index.html',items=items,page=page, total_pages=total_pages)
 
 
     except Exception as e:
@@ -145,28 +152,6 @@ def chat_room():
 @app.route('/board', methods=['GET'])
 def render_create_board():
     return render_template('create_board.html')
-
-
-@app.route('/api/boards', methods=['GET'])
-def list_boards():
-    try:
-        items = list(db.items.find(
-            {'deletedAt': None}, {'title': 1, 'content': 1}).sort([('createDate',1)]))
-
-        print("item"+items.size)
-        for item in items:
-            print(item.title)
-            item['user_id']="임시 닉네임"
-            # userId=db.Users.find_one('_id': )
-        return jsonify(items)
-
-
-    except Exception as e:
-        data = {
-            "type": "error",
-            "error_message": str(e),
-        }
-        return jsonify({'message': 'Server Error'}), 500
 
 
 @app.route('/api/boards/<item_id>', methods=['GET'])
