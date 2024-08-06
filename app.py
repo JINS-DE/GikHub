@@ -29,12 +29,14 @@ room_user_counts = {}
 user_rooms = {}
 
 # test DB를 위한 코드입니다
-# ca = certifi.where()
-# client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
+ca = certifi.where()
+client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
 ###############################################
 # todo: 서버에 올릴때 꼭 주석 제거 production용 DB
 
-client = MongoClient('localhost', 27017)
+# client = MongoClient('localhost', 27017)
+socketio = SocketIO(app)
+
 
 
 db = client.gikhub
@@ -98,18 +100,18 @@ def signup():
         user_id = request.form['user_id']
         user_pw = request.form['password']
         confirm_pw = request.form['re_password']
-        
-            
+
+
         # 비밀번호와 비밀번호 확인이 일치하는지 확인
         if user_pw != confirm_pw:
             flash("비밀번호가 일치하지 않습니다.", "error")
             return redirect(url_for('signup', user_id=user_id))
-        
+
         # 비밀번호 길이 확인
         if len(user_pw) < 8:
             flash("패스워드 8자 이상 입력해주세요.", "error")
             return redirect(url_for('signup', user_id=user_id))
-        
+
         # 사용자 이름 중복 확인
         if db.users.find_one({'user_id': user_id}):
             flash("이미 존재하는 아이디입니다.", "error")
@@ -241,6 +243,36 @@ def create_board():
         }
         return jsonify({'message': 'Server Error'}), 500
 
+@app.route('/api/boards/status/<item_id>', methods=['PATCH'])
+def update_status(item_id):
+     try:
+         print(item_id)
+         if not ObjectId.is_valid(item_id):
+             return jsonify({'message': 'Invalid item ID'}), 400
+         print(item_id)
+         data = request.json
+         if not data:
+            return jsonify({"message": "No data provided"}), 400
+         now = datetime.now(timezone.utc)
+         print(data.get('status'))
+         result = db.items.update_one(
+             {'_id': ObjectId(item_id), 'deletedAt': None},
+             {
+                 '$set': { 'updatedAt': now,'status': data.get('status')},
+             })
+
+         if result.matched_count == 0:
+             return jsonify({"message": "Item not found"}), 404
+         elif result.modified_count == 0:
+             return jsonify({"message": "No changes made to the item"}), 200
+         else:
+             return jsonify({"message": "Item updated successfully"})
+     except Exception as e:
+         data = {
+             "type": "error",
+             "error_message": str(e),
+         }
+         return jsonify({'message': 'Server Error'}), 500
 
 @socketio.on('connect')
 def handle_connect():
