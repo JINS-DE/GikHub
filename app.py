@@ -2,12 +2,16 @@ from flask import Flask, jsonify, render_template, request
 from flask.json.provider import JSONProvider
 from bson import ObjectId
 from pymongo import MongoClient
+import socketio
 
 import json
 from datetime import datetime, timezone
 
 
 app = Flask(__name__)
+sio = socketio.Server()
+
+app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
 
 # uri = "mongodb://mongoadmin:secret@localhost:27017"
 # client = MongoClient(uri)
@@ -238,6 +242,14 @@ def like_memo(item_id):
             "error_message": str(e),
         }
         return jsonify({'message': 'Server Error'}), 500
+
+@sio.event
+def connect(sid, environ):
+    print('connect ', sid)
+
+@sio.event
+def disconnect(sid):
+    print('disconnect ', sid)
 
 
 if __name__ == '__main__':
