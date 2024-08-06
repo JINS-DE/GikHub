@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import json
 from datetime import datetime, timezone
 # JWT
-from flask_jwt_extended import JWTManager, create_access_token
+from flask_jwt_extended import JWTManager, create_access_token,jwt_required,get_jwt_identity
 # 해쉬
 from flask_bcrypt import Bcrypt
 
@@ -165,7 +165,7 @@ def detail_board(item_id):
         item = db.items.find_one(
             {'_id': ObjectId(item_id), 'deletedAt': None})
         # todo 토큰으로 변경이 필요합니다.
-        userId="userId"
+        userId=get_jwt_identity()
         if item is None:
             return jsonify({'message': 'Item not found'}), 404
         is_author = str(item['userId']) == userId
@@ -180,6 +180,7 @@ def detail_board(item_id):
 
 
 @app.route('/api/boards', methods=['POST'])
+@jwt_required()
 def create_board():
     try:
         data = request.json
@@ -203,7 +204,7 @@ def create_board():
         now = datetime.now(timezone.utc)
         status=RequestStatus.IN_PROGRESS.value
         # todo userId 토큰에서 얻은값으로 변경
-        temporaryId="userId"
+        userId=get_jwt_identity()
 
         result = db.items.insert_one(
             {
@@ -211,7 +212,7 @@ def create_board():
                 'content': data['content'],
                 'price': data['price'],
                 # todo userId 토큰에서 얻은값을 ObjectId로 변경하여 저장
-                'userId':temporaryId,
+                'userId':userId,
                 'status': status,
                 'createdAt': now,
                 'updatedAt': now,
@@ -230,12 +231,20 @@ def create_board():
 
 
 @app.route('/api/boards/<item_id>', methods=['DELETE'])
+@jwt_required()
 def delete_boards(item_id):
      try:
          if not ObjectId.is_valid(item_id):
              return jsonify({'message': 'Invalid item ID'}), 400
 
          now = datetime.now(timezone.utc)
+
+         userId=get_jwt_identity()
+
+         item = db.items.find_one({'_id': ObjectId(item_id), 'deletedAt': None})
+
+         if item['user_id'] != ObjectId(userId):
+            return jsonify({'message': 'Unauthorized'}), 403
 
          result = db.items.update_one({'_id': ObjectId(item_id), 'deletedAt': None}, {
              '$set': {
@@ -258,17 +267,23 @@ def delete_boards(item_id):
 
 
 @app.route('/api/boards/status/<item_id>', methods=['PATCH'])
+@jwt_required()
 def update_status(item_id):
     try:
-        print(item_id)
         if not ObjectId.is_valid(item_id):
             return jsonify({'message': 'Invalid item ID'}), 400
-        print(item_id)
         data = request.json
         if not data:
             return jsonify({"message": "No data provided"}), 400
         now = datetime.now(timezone.utc)
-        print(data.get('status'))
+
+        userId=get_jwt_identity()
+
+        item = db.items.find_one({'_id': ObjectId(item_id), 'deletedAt': None})
+
+        if item['user_id'] != ObjectId(userId):
+            return jsonify({'message': 'Unauthorized'}), 403
+
         result = db.items.update_one(
             {'_id': ObjectId(item_id), 'deletedAt': None},
             {
@@ -290,14 +305,12 @@ def update_status(item_id):
 
 
 @app.route('/api/chats', methods=['GET'])
+@jwt_required()
 def list_chats():
     try:
         data = request.json
 
-        userId = data.get("userId")
-
-        if not userId:
-            return jsonify({"message": "Missing 'userId' in request"}), 400
+        userId = get_jwt_identity()
 
         items = list(
             db.chat_rooms.find(
@@ -317,6 +330,7 @@ def list_chats():
 
 
 @app.route('/api/chats', methods=['POST'])
+@jwt_required()
 def create_chat():
     try:
         data = request.json
@@ -325,7 +339,8 @@ def create_chat():
             return jsonify({'message': 'No data provided'}), 400
 
         itemId = data.get('itemId')
-        senderId = data.get('senderId')
+        # 채팅방을 만드는 사람은 글 작성자가 아닌 공유자라고 생각하여 sender에 입력
+        senderId = get_jwt_identity()
         receiverId = data.get('receiverId')
 
         if not itemId:
@@ -360,6 +375,7 @@ def create_chat():
 
 
 @app.route('/api/chat/messages', methods=['POST'])
+@jwt_required()
 def create_chat_message():
     try:
         data = request.json
@@ -368,7 +384,7 @@ def create_chat_message():
             return jsonify({'message': 'No data provided'}), 400
 
         chatId = data.get('chatId')
-        userId = data.get('userId')
+        userId = get_jwt_identity()
         message = data.get('message')
 
         now = datetime.now(timezone.utc)
