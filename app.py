@@ -6,7 +6,8 @@ import socketio
 from enum import Enum
 import certifi
 from flask_socketio import SocketIO, join_room, leave_room, send, emit
-
+import os
+from dotenv import load_dotenv
 import json
 from datetime import datetime, timezone
 # JWT
@@ -27,13 +28,14 @@ bcrypt = Bcrypt(app)
 
 room_user_counts = {}
 user_rooms = {}
+ca = certifi.where()
+environment = os.getenv('ENVIRONMENT', 'production')
 
-# test DB를 위한 코드입니다
-# ca = certifi.where()
-# client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
-###############################################
-# todo: 서버에 올릴때 꼭 주석 제거 production용 DB
-client = MongoClient('localhost', 27017)
+if environment == 'production':
+    ca = certifi.where()
+    client = MongoClient(os.getenv('MONGODB_URI_PRODUCTION'))
+else:
+    client = MongoClient(os.getenv('MONGODB_URI'), tlsCAFile=ca)
 
 
 socketio = SocketIO(app)
