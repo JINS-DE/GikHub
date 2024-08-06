@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request,redirect, flash, url_for
+from flask import Flask, jsonify, render_template, request,redirect, flash, url_for, make_response
 from flask.json.provider import JSONProvider
 from bson import ObjectId
 from pymongo import MongoClient
@@ -9,17 +9,21 @@ from flask_socketio import SocketIO, join_room, leave_room, send, emit
 import os
 from dotenv import load_dotenv
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 # JWT
+
 from flask_jwt_extended import JWTManager, create_access_token,jwt_required,get_jwt_identity
+
 # 해쉬
 from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-# JWT 설정 (JWT 비밀 키 설정)
+# JWT 설정 (JWT 비밀 키 설정, 만료시간)
 app.config['JWT_SECRET_KEY'] = 'gikhub'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1) # 토큰 만료 시간 1시간
+
 # secret_key를 선언하여 html (front end)와 flask 사이flash 메세지 전달을 암호화
 app.secret_key = 'gikhub'
 # JWTManager 및 Bcrypt 인스턴스 초기화
@@ -91,9 +95,30 @@ def render_home():
         print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
-@app.route('/login')
+@app.route('/login', methods=['GET','POST'])
 def login():
-    return render_template('login.html')
+    if request.method == 'GET':
+        return render_template('login.html')
+    else:
+        user_id = request.json.get('user_id')
+        user_pw = request.json.get('password')
+
+        user = db.users.find_one({"user_id": user_id})
+
+        if not user or not bcrypt.check_password_hash(user['password'], user_pw):
+            return jsonify({"error": "아이디 또는 비밀번호가 잘못되었습니다."}), 401
+
+        # JWT 토큰 생성
+        # indenty 속성에 자신이 포장하고 싶은 값을 넣음(보통 식별을 위해 사용자 아이디를 넣어서 토큰을 만든다.)
+        access_token = create_access_token(identity=user_id)
+
+        return jsonify({"access_token": access_token}), 200
+
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return jsonify({"logged_in_as": current_user}), 200
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -112,17 +137,17 @@ def signup():
         # 비밀번호와 비밀번호 확인이 일치하는지 확인
         if user_pw != confirm_pw:
             flash("비밀번호가 일치하지 않습니다.", "error")
-            return redirect(url_for('signup', user_id=user_id))
+            return redirect(url_for('signup'))
 
         # 비밀번호 길이 확인
         if len(user_pw) < 8:
             flash("패스워드 8자 이상 입력해주세요.", "error")
-            return redirect(url_for('signup', user_id=user_id))
+            return redirect(url_for('signup'))
 
         # 사용자 이름 중복 확인
         if db.users.find_one({'user_id': user_id}):
             flash("이미 존재하는 아이디입니다.", "error")
-            return redirect(url_for('signup', user_id=user_id))
+            return redirect(url_for('signup'))
 
         # 비밀번호 해싱
         hashed_password = bcrypt.generate_password_hash(user_pw).decode('utf-8')
