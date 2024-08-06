@@ -32,7 +32,7 @@
           <h1 class="text-2xl font-bold">긱허브</h1>
         </div>
         <div class="flex items-center">
-          <button onclick="logoutFunction()" class="focus:outline-none">
+          <button onclick="logout()" class="focus:outline-none">
             <img
               src="{{ url_for('static', filename='img/logout.png') }}"
               alt="Logout"
@@ -66,11 +66,15 @@
             .animate(
               {
                 top: scrollTop + $(window).height() - 70,
-              },
+              },  
               500
             );
         });
       });
+      function logout() {
+        localStorage.removeItem('access_token');  // 토큰 삭제
+        window.location.href = '/login';  // 로그인 페이지로 리디렉션
+    };
     </script>
   </body>
 </html>
