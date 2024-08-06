@@ -1,17 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>긱허브</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-      rel="stylesheet"
-    />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  </head>
+{% extends 'base.html' %} {% block title %}로그인 페이지 - 긱허브{% endblock %}
 
-  <body class="bg-gray-100">
+{% block content %}
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<script>
+    alert("{{messages[0]}}")
+</script>
+{% endif %}
+{% endwith %}
+
     <div class="flex items-center justify-center h-screen">
         <div class="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
             <img
@@ -35,5 +32,4 @@
                 긱허브에 회원가입 ---
                 <a href="/signup" class="text-red-500 hover:underline">회원가입</a>
             </p>
-  </body>
-</html>
+{% endblock %}

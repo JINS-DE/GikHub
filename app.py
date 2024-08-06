@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request,redirect, flash, url_for
 from flask.json.provider import JSONProvider
 from bson import ObjectId
 from pymongo import MongoClient
@@ -9,10 +9,21 @@ from flask_socketio import SocketIO, join_room, leave_room, send, emit
 
 import json
 from datetime import datetime, timezone
-
+# JWT
+from flask_jwt_extended import JWTManager, create_access_token
+# 해쉬
+from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 socketio = SocketIO(app)
+
+# JWT 설정 (JWT 비밀 키 설정)
+app.config['JWT_SECRET_KEY'] = 'gikhub'
+# secret_key를 선언하여 html (front end)와 flask 사이flash 메세지 전달을 암호화
+app.secret_key = 'gikhub'
+# JWTManager 및 Bcrypt 인스턴스 초기화
+jwt = JWTManager(app)
+bcrypt = Bcrypt(app)
 
 room_user_counts = {}
 user_rooms = {}
@@ -74,6 +85,56 @@ def render_home():
 @app.route('/login')
 def login():
     return render_template('login.html')
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'GET':
+        return render_template('signup.html')
+    else:
+        name = request.form["name"]
+        ho = request.form["ho"]
+        nick = request.form["nick"]
+        user_id = request.form['user_id']
+        user_pw = request.form['password']
+        confirm_pw = request.form['re_password']
+        
+            
+        # 비밀번호와 비밀번호 확인이 일치하는지 확인
+        if user_pw != confirm_pw:
+            flash("비밀번호가 일치하지 않습니다.", "error")
+            return redirect(url_for('signup', user_id=user_id))
+        
+        # 비밀번호 길이 확인
+        if len(user_pw) < 8:
+            flash("패스워드 8자 이상 입력해주세요.", "error")
+            return redirect(url_for('signup', user_id=user_id))
+        
+        # 사용자 이름 중복 확인
+        if db.users.find_one({'user_id': user_id}):
+            flash("이미 존재하는 아이디입니다.", "error")
+            return redirect(url_for('signup', user_id=user_id))
+
+        # 비밀번호 해싱
+        hashed_password = bcrypt.generate_password_hash(user_pw).decode('utf-8')
+        # 사용자 정보 저장
+        db.users.insert_one({
+            "user_id": user_id,
+            "password": hashed_password,
+            "name":name,
+            "ho":ho,
+            "nick":nick
+        })
+
+        flash("회원가입이 성공적으로 완료되었습니다.", "success")
+        return redirect(url_for('login'))
+
+@app.route('/check-duplicate', methods=['POST'])
+def check_duplicate():
+    user_id = request.form['user_id']
+    user_exists = db.users.find_one({'user_id': user_id}) is not None
+    return jsonify({'exists': user_exists})
+
 
 
 @app.route('/chatting')
