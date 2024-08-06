@@ -1,104 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>긱허브</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-      rel="stylesheet"
-    />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-      .floating-chat-icon {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        cursor: pointer;
-        z-index: 1000;
-      }
-    </style>
-  </head>
-  <body class="bg-gray-100">
-    <!-- Header Section -->
-    <header class="bg-white shadow">
-      <div class="container mx-auto p-4 flex items-center justify-between">
-        <div class="flex items-center">
-          <img
-            src="{{ url_for('static', filename='img/logo.png') }}"
-            alt="Logo"
-            class="h-8 mr-2"
-          />
-          <h1 class="text-2xl font-bold">긱허브</h1>
-        </div>
-        <div class="flex items-center">
-          <button onclick="logoutFunction()" class="focus:outline-none">
-            <img
-              src="{{ url_for('static', filename='img/logout.png') }}"
-              alt="Logout"
-              class="h-8 mr-2"
-            />
-          </button>
-        </div>
-      </div>
-    </header>
+{% extends "base.html" %} {% block title %}메인 페이지 - 긱허브{% endblock %}
+{%block content %}
 
-    <!-- Main Content Section -->
-    <main class="container mx-auto my-8">
-      <div id="request-list" class="bg-white p-4 shadow rounded-lg">
-        <!-- 물품 요청 글을 여기에 동적으로 추가합니다. -->
-        <div class="border-b border-gray-200 py-4">
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-sm text-green-500">거래 완료</span>
-            <span class="text-sm text-gray-500">작성자: 437호 - 가그린</span>
-          </div>
-          <h2 class="text-xl font-bold mb-2">세제 1회 용량만 빌려주실 분~</h2>
-          <p class="text-gray-700">
-            빨래하려고 하는데 세제가 다 떨어졌네요ㅜㅜ 1회 용량만 빌려주실 분
-            찾아요~
-          </p>
-        </div>
-        <!-- 추가적인 물품 요청 글들이 여기에 들어갑니다. -->
-      </div>
-
-      <!-- Pagination Section -->
-      <div id="pagination" class="flex justify-center my-4">
-        <!-- 페이지네이션 버튼을 여기에 동적으로 추가합니다. -->
-        <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">1</button>
-        <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">2</button>
-        <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">3</button>
-      </div>
-
-      <div id="createButton" class="flex flex-row-reverse my-4">
-        <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">
-          생성
-        </button>
-      </div>
-    </main>
-
-    <!-- Floating Chat Icon -->
-    <div class="floating-chat-icon">
-      <img
-        src="{{ url_for('static', filename='img/chat_icon.png') }}"
-        alt="Chat Icon"
-        class="h-12 w-12"
-      />
+<div id="request-list" class="bg-white p-4 shadow rounded-lg">
+  <!-- 물품 요청 글을 여기에 동적으로 추가합니다. -->
+  <div class="border-b border-gray-200 py-4">
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-sm text-green-500">거래 완료</span>
+      <span class="text-sm text-gray-500">작성자: 437호 - 가그린</span>
     </div>
+    <h2 class="text-xl font-bold mb-2">세제 1회 용량만 빌려주실 분~</h2>
+    <p class="text-gray-700">
+      빨래하려고 하는데 세제가 다 떨어졌네요ㅜㅜ 1회 용량만 빌려주실 분 찾아요~
+    </p>
+  </div>
+  <!-- 추가적인 물품 요청 글들이 여기에 들어갑니다. -->
+</div>
 
-    <script>
-      $(document).ready(function () {
-        $(window).scroll(function () {
-          var scrollTop = $(window).scrollTop();
-          $('.floating-chat-icon')
-            .stop()
-            .animate(
-              {
-                top: scrollTop + $(window).height() - 70,
-              },
-              500
-            );
-        });
-      });
-    </script>
-  </body>
-</html>
+<!-- Pagination Section -->
+<div id="pagination" class="flex justify-center my-4">
+  <!-- 페이지네이션 버튼을 여기에 동적으로 추가합니다. -->
+  <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">1</button>
+  <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">2</button>
+  <button class="mx-1 px-3 py-1 bg-blue-500 text-white rounded">3</button>
+</div>
+
+<div id="createButton" class="flex flex-row-reverse my-4">
+  <button
+    class="mx-1 px-3 py-1 bg-blue-500 text-white rounded"
+    onclick="location.href='{{ url_for('create_board') }}'"
+  >
+    생성
+  </button>
+</div>
+{% endblock %}
