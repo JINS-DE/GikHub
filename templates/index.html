@@ -11,7 +11,7 @@
       onclick="window.location.href='{{ url_for('detail_board', item_id=item['_id']) }}'"
     >
       <div class="flex justify-between items-center mb-2">
-        <span class="text-sm text-green-500">{{ item['status'] }}</span>
+        <span class="text-sm {% if item['status'] == '진행중' %}text-green-500{% elif item['status'] == '완료' %}text-red-500{% else %}text-gray-500{% endif %}"">{{ item['status'] }}</span>
         <span class="text-sm text-gray-500">작성자: {{ item['user_id'] }}</span>
       </div>
       <h2 class="text-xl font-bold mb-2">{{ item['title'] }}</h2>
