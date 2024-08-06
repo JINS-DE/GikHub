@@ -24,6 +24,7 @@ block content %}
           alert(data.message);
         } else {
           alert('게시글이 정상적으로 생성되었습니다.');
+          window.location.href = `/api/boards/${data.item_id}`;
         }
       })
       .catch((e) => {

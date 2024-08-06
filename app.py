@@ -48,7 +48,23 @@ app.json = CustomJSONProvider(app)
 
 @app.route('/' , methods=['GET'])
 def render_home():
-    return render_template('index.html')
+    try:
+        items = list(db.items.find(
+            {'deletedAt': None}, {'title': 1, 'content': 1, 'status':1}).sort([('createDate',1)]))
+
+        for item in items:
+            # todo 토큰 변경 필요
+            item['user_id']="임시 닉네임"
+        return render_template('index.html',items=items)
+
+
+    except Exception as e:
+        data = {
+            "type": "error",
+            "error_message": str(e),
+        }
+        print(str(e))
+        return jsonify({'message': 'Server Error'}), 500
 
 @app.route('/chatting' , methods=['GET'])
 def render_chat_room():
@@ -64,8 +80,16 @@ def render_create_board():
 def list_boards():
     try:
         items = list(db.items.find(
-            {'deletedAt': None}, {'title': 1, 'content': 1}))
+            {'deletedAt': None}, {'title': 1, 'content': 1}).sort([('createDate',1)]))
+
+        print("item"+items.size)
+        for item in items:
+            print(item.title)
+            item['user_id']="임시 닉네임"
+            # userId=db.Users.find_one('_id': )
         return jsonify(items)
+
+
     except Exception as e:
         data = {
             "type": "error",
@@ -75,18 +99,20 @@ def list_boards():
 
 
 @app.route('/api/boards/<item_id>', methods=['GET'])
-def get_memo(item_id):
+def detail_board(item_id):
     try:
         if not ObjectId.is_valid(item_id):
             return jsonify({'message': 'Invalid item ID'}), 400
 
-        item = db.memos.find_one(
-            {'_id': ObjectId(item_id), 'deletedAt': None}, {'title': 1, 'content': 1, 'likes': 1})
+        item = db.items.find_one(
+            {'_id': ObjectId(item_id), 'deletedAt': None})
 
         if item is None:
             return jsonify({'message': 'Item not found'}), 404
 
-        return jsonify(item)
+        # userId=db.users.find_one({'_id': item['user_id']}, {'id':1,'_id':0})
+
+        return render_template('board_detail.html',item=item, userId="userId['id']")
     except Exception as e:
         data = {
             "type": "error",
@@ -135,7 +161,7 @@ def create_board():
             }
         )
 
-        return jsonify({"_id": result.inserted_id}), 201
+        return jsonify({"item_id": result.inserted_id}), 201
     except Exception as e:
         print(str(e))
         data = {
