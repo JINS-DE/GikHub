@@ -39,6 +39,11 @@ app.json = CustomJSONProvider(app)
 def home():
     return render_template('index.html')
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+
 @app.route('/chatting')
 def chat_room():
     return render_template('chatting.html')
