@@ -1,3 +1,3 @@
 #!/bin/sh
 
-pgrep -f 'gunicorn -w 4 app:app' | xargs -r kill
+pgrep -f 'gunicorn -k gevent -w 1 app:app' | xargs -r kill

@@ -5,6 +5,8 @@ from pymongo import MongoClient
 import socketio
 from enum import Enum
 import certifi
+from flask_socketio import SocketIO
+
 import json
 from datetime import datetime, timezone
 
@@ -18,6 +20,9 @@ app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
 # client = MongoClient('mongodb+srv://answldjs1836:ehVAtTGQ99erpdeX@cluster0.pceqwc3.mongodb.net/?retryWrites=true&w=majority', tlsCAFile=ca)
 ###############################################
 # todo: 서버에 올릴때 꼭 주석 제거 production용 DB
+
+socketio = SocketIO(app)
+
 client = MongoClient('localhost', 27017)
 
 
@@ -66,8 +71,13 @@ def render_home():
         print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
-@app.route('/chatting' , methods=['GET'])
-def render_chat_room():
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+
+@app.route('/chatting')
+def chat_room():
     return render_template('chatting.html')
 
 
@@ -274,14 +284,31 @@ def like_memo(item_id):
         }
         return jsonify({'message': 'Server Error'}), 500
 
-@sio.event
-def connect(sid, environ):
-    print('connect ', sid)
 
-@sio.event
-def disconnect(sid):
-    print('disconnect ', sid)
+@socketio.on('connect')
+def handle_connect():
+    client_id = request.sid
+    print(f'Client connected: {client_id}')
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    client_id = request.sid
+    print(f'Client disconnected: {client_id}')
+
+
+@socketio.on('error')
+def handle_error(e):
+    client_id = request.sid
+    print(f'An error has occurred on {client_id}: {str(e)}')
+
+
+@socketio.on('send_message')
+def handle_send_message(message):
+    client_id = request.sid
+    socketio.emit('reply', {"sid": client_id, "message": message})
+    print(f'Received message: {message} from {client_id}')
 
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000)
