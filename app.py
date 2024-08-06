@@ -145,10 +145,14 @@ def check_duplicate():
     return jsonify({'exists': user_exists})
 
 
-
 @app.route('/chatting')
 def chat_room():
     return render_template('chatting.html')
+
+
+@app.route('/chatting-list')
+def chat_room_list():
+    return render_template('chatting_list.html')
 
 
 @app.route('/board', methods=['GET'])
@@ -270,17 +274,40 @@ def list_chats():
         if not userId:
             return jsonify({"message": "Missing 'userId' in request"}), 400
 
-        items = list(
-            db.chat_rooms.find(
-                {
-                    'deletedAt': None,
-                    'participants': {
-                        '$elemMatch': {'userId': userId}
+        items = list(db.chat_rooms.aggregate([
+            {
+                "$match": {
+                    "participants": {
+                        "$elemMatch": {
+                            "userId": userId
+                        }
                     }
-                },
-                {'itemId': 1, 'participants': 1, 'messages': 1, 'updatedAt': 1}
-            ).sort([('updatedAt', -1)])
-        )
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "items",
+                    "localField": "itemId",
+                    "foreignField": "_id",
+                    "as": "itemData"
+                }
+            },
+            {
+                "$unwind": "$itemData"
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "itemId": 1,
+                    "participants": 1,
+                    "messages": 1,
+                    "createdAt": 1,
+                    "updatedAt": 1,
+                    "itemDetails": "$itemData"
+                }
+            }
+        ]))
+
         return jsonify(items)
     except Exception as e:
         print(str(e))
@@ -312,7 +339,7 @@ def create_chat():
 
         result = db.chat_rooms.insert_one(
             {
-                'itemId': itemId,
+                'itemId': ObjectId(itemId),
                 'participants': [
                     {"userId": senderId, "unreadCount": 0},
                     {"userId": receiverId, "unreadCount": 0}
@@ -341,6 +368,15 @@ def create_chat_message():
         chatId = data.get('chatId')
         userId = data.get('userId')
         message = data.get('message')
+
+        if not chatId:
+            return jsonify({"message": "Missing 'chatId' in request"}), 400
+
+        if not userId:
+            return jsonify({"message": "Missing 'userId' in request"}), 400
+
+        if not message:
+            return jsonify({"message": "Missing 'message' in request"}), 400
 
         now = datetime.now(timezone.utc)
 
