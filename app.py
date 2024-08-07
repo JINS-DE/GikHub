@@ -77,7 +77,7 @@ def render_home():
 
         for item in items:
             user = db.users.find_one({"_id": item['userId']},{'ho':1,'nick':1})
-            item['user_id']=user['ho']+" "+user['nick']
+            item['user_id']=user['ho']+"호 "+user['nick']
 
         total_items = db.items.count_documents({'deletedAt': None})
         total_pages = (total_items + per_page - 1) // per_page  # 총 페이지 수
@@ -216,6 +216,11 @@ def detail_board(item_id):
 
         item = db.items.find_one(
             {'_id': ObjectId(item_id), 'deletedAt': None})
+
+        user = db.users.find_one({"_id": item['userId']},{'ho':1,'nick':1})
+        item['user_id']=item['userId']
+        item['userId']=user['ho']+"호 "+user['nick']
+
 
         if item is None:
             return jsonify({'message': 'Item not found'}), 404

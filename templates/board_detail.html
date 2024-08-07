@@ -124,7 +124,8 @@ block content %}
       })
       .then((data) => {
         const userId = data.auth;
-        const isAuthor = userId && userId === '{{ item["userId"] }}';
+
+        const isAuthor = userId && userId === '{{ item["user_id"] }}';
         if (isAuthor) {
           document.getElementById('delete-button').style.display = 'block';
           document.getElementById('complete_status').style.display = 'block';
@@ -184,13 +185,13 @@ block content %}
       </p>
     </div>
     <div class="flex justify-end">
+      {% if item['status'] == '진행중' %}
       <button
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         onclick="goChatRoom()"
       >
         채팅
       </button>
-      {% if item['status'] == '진행중' %}
       <button
         id="complete_status"
         class="px-4 py-2 bg-green-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ml-2"
