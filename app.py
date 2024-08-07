@@ -11,7 +11,7 @@ import json
 from datetime import datetime, timezone, timedelta
 # JWT
 import jwt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request,create_refresh_token
 
 # 해쉬
 from flask_bcrypt import Bcrypt
@@ -36,9 +36,9 @@ environment = os.getenv('ENVIRONMENT', 'production')
 if environment == 'production':
     ca = certifi.where()
     client = MongoClient(os.getenv('MONGODB_URI_PRODUCTION'))
+
 else:
     client = MongoClient(os.getenv('MONGODB_URI'), tlsCAFile=ca)
-
 
 db = client.gikhub
 
@@ -129,7 +129,9 @@ def protected():
     if token:
             token = token.split("Bearer ")[1]
             decoded_token= jwt.decode(token, app.secret_key, algorithms=['HS256'])
+            print(decoded_token)
             userId=decoded_token.get('sub')
+            print(userId)
     else:
         userId = None
 
@@ -188,6 +190,7 @@ def render_board_detail():
 
 @app.route('/board', methods=['GET'])
 def render_create_board():
+    # 만약 토큰 에러 발생시 login
     return render_template('create_board.html')
 
 
@@ -211,6 +214,16 @@ def detail_board(item_id):
         }
         return jsonify({'message': 'Server Error'}), 500
 
+# refreshToken 을 통해 accessToken 재발급 (아직 사용안함)
+@app.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    try:
+        current_user = get_jwt_identity()
+        access_token = create_access_token(identity=current_user)
+        return jsonify(access_token=access_token)
+    except Exception as e:
+        return jsonify({"msg": "Token refresh failed", "error": str(e)}), 401
 
 @app.route('/api/boards', methods=['POST'])
 @jwt_required()
