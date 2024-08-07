@@ -1,52 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script
-      src="https://cdn.socket.io/4.7.5/socket.io.min.js"
-      integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
-      crossorigin="anonymous"
-    ></script>
-    <script>
-      let accessToken;
-      document.addEventListener("DOMContentLoaded", function () {
-        showItems();
+{% extends "base.html" %} {% block title %}채팅방 목록 - 긱허브{% endblock %} {%
+block content %}
+<script
+  src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+  integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+  crossorigin="anonymous"
+></script>
+<script>
+  let accessToken;
+  document.addEventListener('DOMContentLoaded', function () {
+    showItems();
+  });
+
+  function showItems() {
+    const roomList = document.getElementById('room-list');
+    roomList.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+    fetch(`/api/chats`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('서버 오류!');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        for (let i = 0; i < data.length; i++) {
+          const cardElement = makeItem(data[i]._id, data[i].itemDetails.title);
+          fragment.appendChild(cardElement);
+        }
+        roomList.appendChild(fragment);
       });
+  }
 
-      function showItems() {
-        const roomList = document.getElementById("room-list");
-        roomList.innerHTML = "";
-
-        const fragment = document.createDocumentFragment();
-        fetch(`/api/chats`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-        })
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error("서버 오류!");
-            }
-            return res.json();
-          })
-          .then((data) => {
-            for (let i = 0; i < data.length; i++) {
-              const cardElement = makeItem(
-                data[i]._id,
-                data[i].itemDetails.title
-              );
-              fragment.appendChild(cardElement);
-            }
-            roomList.appendChild(fragment);
-          });
-      }
-
-      function makeItem(id, title) {
-        const item = document.createElement("li");
-        item.innerHTML = `<li>
+  function makeItem(id, title) {
+    const item = document.createElement('li');
+    item.innerHTML = `<li>
                             <a
                               href="/chatting/${id}"
                               class="block hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition duration-150 ease-in-out"
@@ -66,41 +59,39 @@
                               </div>
                             </a>
                           </li>`;
-        return item;
-      }
-    </script>
+    return item;
+  }
+</script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Jua&display=swap"
-      rel="stylesheet"
-    />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Jua&display=swap"
+  rel="stylesheet"
+/>
 
-    <style type="text/css">
-      * {
-        font-family: "Jua", sans-serif;
-        font-weight: 400;
-        font-style: normal;
-      }
-    </style>
+<style type="text/css">
+  * {
+    font-family: 'Jua', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+</style>
 
-    <title>Gikhub</title>
-  </head>
-  <body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-2">
-      <button
-        onclick="history.back()"
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-      >
-        Go Back
-      </button>
+<body class="bg-gray-100">
+  <div class="container mx-auto px-4 py-2">
+    <button
+      onclick="history.back()"
+      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+    >
+      Go Back
+    </button>
+  </div>
+
+  <div class="container mx-auto px-4 py-3">
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+      <ul id="room-list"></ul>
     </div>
-
-    <div class="container mx-auto px-4 py-3">
-      <div class="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul id="room-list"></ul>
-      </div>
-    </div>
-  </body>
-</html>
+  </div>
+</body>
+{% endblock %}
