@@ -32,7 +32,6 @@ bcrypt = Bcrypt(app)
 user_rooms = {}
 ca = certifi.where()
 environment = os.getenv('ENVIRONMENT', 'production')
-
 if environment == 'production':
     ca = certifi.where()
     client = MongoClient(os.getenv('MONGODB_URI_PRODUCTION'))
@@ -214,6 +213,9 @@ def detail_board(item_id):
 @jwt_required()
 def create_board():
     try:
+        # JWT 토큰에서 사용자 ID를 가져옵니다.
+        current_user_id = get_jwt_identity()
+
         data = request.json
 
         userId=get_jwt_identity()
@@ -330,6 +332,34 @@ def update_status(item_id):
             "error_message": str(e),
         }
         return jsonify({'message': 'Server Error'}), 500
+
+@app.route('/api/boards/edit/<item_id>', methods=['PATCH'])
+def edit_board(item_id):
+    try:
+        data=request.json
+        title = data.get('title')    
+        content = data.get('content')    
+        price = data.get('price')    
+        now = datetime.now(timezone.utc)
+        result = db.items.update_one(
+             {'_id': ObjectId(item_id), 'deletedAt': None},
+             {
+                '$set': { 'updatedAt': now,'title': title,'content':content,'price':price},
+             })
+        if result.matched_count == 0:
+            return jsonify({"message": "Item not found"}), 404
+        elif result.modified_count == 0:
+            return jsonify({"message": "No changes made to the item"}), 200
+        else:
+            return jsonify({"message": "Item updated successfully"})
+        
+    except Exception as e:
+         data = {
+             "type": "error",
+             "error_message": str(e),
+         }
+         return jsonify({'message': 'Server Error'}), 500
+
 
 @app.route('/api/chats', methods=['GET'])
 @jwt_required()
