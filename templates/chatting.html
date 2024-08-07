@@ -26,7 +26,10 @@
         });
 
         socket = io({
-          transports: ["websocket"],
+          // transports: ["websocket"],
+          extraHeaders: {
+            authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
         });
 
         currentRoom = "{{ room_id }}";
@@ -77,19 +80,19 @@
         if (socket.id === id) {
           item.className = "flex items-end justify-end";
           item.innerHTML = `<div class="text-right mr-2">
-                              <div class="text-xs text-gray-600">${id}</div>
-                            </div>
-                            <div class="bg-blue-500 text-white text-sm p-2 rounded-lg max-w-xs">
-                              ${content}
-                            </div>`;
+                                  <div class="text-xs text-gray-600">${id}</div>
+                                </div>
+                                <div class="bg-blue-500 text-white text-sm p-2 rounded-lg max-w-xs">
+                                  ${content}
+                                </div>`;
         } else {
           item.className = "flex items-end justify-start";
           item.innerHTML = `<div class="bg-gray-300 text-sm p-2 rounded-lg max-w-xs">
-                              ${content}
-                            </div>
-                            <div class="text-left ml-2">
-                              <div class="text-xs text-gray-600">${id}</div>
-                            </div>`;
+                                  ${content}
+                                </div>
+                                <div class="text-left ml-2">
+                                  <div class="text-xs text-gray-600">${id}</div>
+                                </div>`;
         }
 
         return item;

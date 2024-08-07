@@ -2,16 +2,15 @@ from flask import Flask, jsonify, render_template, request,redirect, flash, url_
 from flask.json.provider import JSONProvider
 from bson import ObjectId
 from pymongo import MongoClient
-import socketio
 from enum import Enum
 import certifi
-from flask_socketio import SocketIO, join_room, leave_room, send, emit
+from flask_socketio import SocketIO, join_room, leave_room, send, emit, disconnect
 import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime, timezone, timedelta
 # JWT
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
 # 해쉬
 from flask_bcrypt import Bcrypt
 
@@ -39,9 +38,8 @@ else:
     client = MongoClient(os.getenv('MONGODB_URI'), tlsCAFile=ca)
 
 
-socketio = SocketIO(app)
-
 db = client.gikhub
+
 
 class RequestStatus(Enum):
     IN_PROGRESS = "진행중"
@@ -316,12 +314,20 @@ def update_status(item_id):
 
 
 @app.route('/api/chats', methods=['GET'])
+@jwt_required()
 def list_chats():
     try:
-        userId = request.args.get('userId')
+        auth_header = request.headers.get('Authorization', None)
 
-        if not userId:
-            return jsonify({"message": "Missing 'userId' in request"}), 400
+        if auth_header:
+            try:
+                token = auth_header.split(' ')[1]
+            except IndexError:
+                return jsonify({'error': 'Bearer token malformed'}), 401
+        else:
+            return jsonify({'error': 'Authorization header is missing'}), 401
+
+        userId = get_jwt_identity()
 
         items = list(db.chat_rooms.aggregate([
             {
@@ -453,7 +459,20 @@ def create_chat_message():
         return jsonify({'message': 'Server Error'}), 500
 
 
+def authenticated_only(f):
+    def wrapped(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+        except Exception as e:
+            disconnect()
+            print(str(e))
+            return
+        return f(*args, **kwargs)
+    return wrapped
+
+
 @socketio.on('connect')
+@authenticated_only
 def handle_connect():
     client_id = request.sid
     print(f'Client connected: {client_id}')

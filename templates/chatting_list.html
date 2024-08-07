@@ -10,16 +10,22 @@
       crossorigin="anonymous"
     ></script>
     <script>
+      let accessToken;
       document.addEventListener("DOMContentLoaded", function () {
-        showItems("senderId");
+        showItems();
       });
 
-      function showItems(userId) {
+      function showItems() {
         const roomList = document.getElementById("room-list");
         roomList.innerHTML = "";
 
         const fragment = document.createDocumentFragment();
-        fetch(`/api/chats?userId=${userId}`, { method: "GET" })
+        fetch(`/api/chats`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        })
           .then((res) => {
             if (!res.ok) {
               throw new Error("서버 오류!");
