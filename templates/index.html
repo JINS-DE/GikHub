@@ -1,6 +1,16 @@
 {% extends "base.html" %} {% block title %}메인 페이지 - 긱허브{% endblock %}
 {%block content %}
 <script>
+$(document).ready(function() {
+  const token = localStorage.getItem('access_token');
+  console.log(token)
+  if (token!==null) {
+        $('#create_button').show(); // 수정 버튼 보이기
+      } else {
+        $('#create_button').hide(); // 수정 버튼 숨기기
+      }
+});
+
 function goDetail(itemId){
       window.location.href = `/api/boards/${itemId}`;
 }
@@ -40,6 +50,7 @@ function goDetail(itemId){
 
 <div id="createButton" class="flex flex-row-reverse my-4">
   <button
+  id="create_button"
     class="mx-1 px-3 py-1 bg-blue-500 text-white rounded"
     onclick="location.href='{{ url_for('render_create_board') }}'"
   >
