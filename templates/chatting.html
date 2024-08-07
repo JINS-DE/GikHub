@@ -14,8 +14,76 @@
       let chatArea;
       let chatMessageBox;
       let currentRoom;
+      let myUserId;
+
+      function base64UrlDecode(str) {
+        // Base64 URL-safe 문자열을 Base64로 변환
+        let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+        // 패딩 추가
+        const padLength = 4 - (base64.length % 4);
+        if (padLength < 4) {
+          base64 += "=".repeat(padLength);
+        }
+        // Base64 문자열을 디코드
+        return atob(base64);
+      }
+
+      function decodeJWT(token) {
+        // 토큰을 '.'을 기준으로 세 부분으로 나눕니다.
+        const parts = token.split(".");
+        if (parts.length !== 3) {
+          throw new Error("Invalid JWT: The token must have three parts");
+        }
+
+        // 헤더와 페이로드를 디코드
+        const header = JSON.parse(base64UrlDecode(parts[0]));
+        const payload = JSON.parse(base64UrlDecode(parts[1]));
+
+        return { header, payload };
+      }
+
+      function getNickFromUserId(id, participants) {
+        for (let i = 0; i < participants.length; i++) {
+          if (participants[i]._id === id) {
+            return participants[i].nick;
+          }
+        }
+      }
+
+      function showItems() {
+        chatArea.innerHTML = "";
+
+        const fragment = document.createDocumentFragment();
+        fetch("/api/chat/messages?room={{ room_id }}", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("서버 오류!");
+            }
+            return res.json();
+          })
+          .then((data) => {
+            for (let i = 0; i < data.messages.length; i++) {
+              const messageElement = makeItem(
+                data.messages[i].userId,
+                data.messages[i].message,
+                getNickFromUserId(data.messages[i].userId, data.participants)
+              );
+              fragment.appendChild(messageElement);
+            }
+            chatArea.appendChild(fragment);
+            scrollToBottom();
+          });
+      }
 
       document.addEventListener("DOMContentLoaded", function () {
+        const { payload } = decodeJWT(localStorage.getItem("access_token"));
+        myUserId = payload.sub;
+
         chatArea = document.getElementById("chatArea");
         chatMessageBox = document.getElementById("chatMessageBox");
         chatMessageBox.addEventListener("keypress", function (event) {
@@ -24,6 +92,8 @@
             sendMessage();
           }
         });
+
+        showItems();
 
         socket = io({
           // transports: ["websocket"],
@@ -48,7 +118,7 @@
         });
 
         socket.on("reply", function (data) {
-          const newMsgEle = makeItem(data.sid, data.message);
+          const newMsgEle = makeItem(data.userId, data.message, data.nick);
           chatArea.appendChild(newMsgEle);
           console.log(`received: ${JSON.stringify(data)}`);
           scrollToBottom();
@@ -75,13 +145,13 @@
         socket.emit("send_message", { message: msg, room: currentRoom });
       }
 
-      function makeItem(id, content) {
+      function makeItem(id, content, nick) {
         const item = document.createElement("div");
 
-        if (socket.id === id) {
+        if (myUserId === id) {
           item.className = "flex items-end justify-end";
           item.innerHTML = `<div class="text-right mr-2">
-                                  <div class="text-xs text-gray-600">${id}</div>
+                                  <div class="text-xs text-gray-600">${nick}</div>
                                 </div>
                                 <div class="bg-blue-500 text-white text-sm p-2 rounded-lg max-w-xs">
                                   ${content}
@@ -92,7 +162,7 @@
                                   ${content}
                                 </div>
                                 <div class="text-left ml-2">
-                                  <div class="text-xs text-gray-600">${id}</div>
+                                  <div class="text-xs text-gray-600">${nick}</div>
                                 </div>`;
         }
 
@@ -100,7 +170,6 @@
       }
 
       function scrollToBottom() {
-        const chatArea = document.getElementById("chatArea");
         chatArea.scrollTop = chatArea.scrollHeight;
       }
     </script>
