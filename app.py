@@ -32,7 +32,6 @@ bcrypt = Bcrypt(app)
 user_rooms = {}
 ca = certifi.where()
 environment = os.getenv('ENVIRONMENT', 'production')
-
 if environment == 'production':
     ca = certifi.where()
     client = MongoClient(os.getenv('MONGODB_URI_PRODUCTION'))
@@ -214,6 +213,9 @@ def detail_board(item_id):
 @jwt_required()
 def create_board():
     try:
+        # JWT 토큰에서 사용자 ID를 가져옵니다.
+        current_user_id = get_jwt_identity()
+
         data = request.json
 
         userId=get_jwt_identity()
