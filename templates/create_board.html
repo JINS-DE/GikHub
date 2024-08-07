@@ -1,6 +1,30 @@
 {% extends "base.html" %} {% block title %}게시물 생성 - 긱허브{% endblock %} {%
 block content %}
 <script>
+  window.onload = function () {
+    // 현재 브라우저에 저장된 access_token값을 사용해서 만료 여부를 알아낸 뒤에 만료되었다면 로그인 페이지로 리디렉션
+    fetch('/protected', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('인증 실패');
+        }
+
+        return res.json();
+      })
+      .then((data) => {
+        console.log(data);
+      })
+      .catch((e) => {
+        alert('로그인이 필요합니다.');
+        window.location.href = '/login';
+      });
+  };
   function postBoard(event) {
     event.preventDefault();
     const title = document.getElementById('title');
