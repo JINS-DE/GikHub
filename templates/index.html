@@ -1,6 +1,10 @@
 {% extends "base.html" %} {% block title %}메인 페이지 - 긱허브{% endblock %}
 {%block content %}
-
+<script>
+function goDetail(itemId){
+      window.location.href = `/api/boards/${itemId}`;
+}
+</script>
 <div id="request-list" class="bg-white p-4 shadow rounded-lg">
   <!-- 물품 요청 글을 여기에 동적으로 추가합니다. -->
   <h2 class="text-2xl font-bold mb-4">물품 요청 글</h2>
@@ -8,7 +12,7 @@
     {% for item in items %}
     <div
       class="border-b border-gray-200 py-4 cursor-pointer"
-      onclick="window.location.href='{{ url_for('detail_board', item_id=item['_id']) }}'"
+      onclick="goDetail('{{ item['_id'] }}')"
     >
       <div class="flex justify-between items-center mb-2">
         <span class="text-sm {% if item['status'] == '진행중' %}text-green-500{% elif item['status'] == '완료' %}text-red-500{% else %}text-gray-500{% endif %}"">{{ item['status'] }}</span>

@@ -10,7 +10,9 @@ from dotenv import load_dotenv
 import json
 from datetime import datetime, timezone, timedelta
 # JWT
+import jwt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
+
 # 해쉬
 from flask_bcrypt import Bcrypt
 
@@ -24,7 +26,7 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1) # 토큰 만료 시�
 # secret_key를 선언하여 html (front end)와 flask 사이flash 메세지 전달을 암호화
 app.secret_key = 'gikhub'
 # JWTManager 및 Bcrypt 인스턴스 초기화
-jwt = JWTManager(app)
+jwtManager = JWTManager(app)
 bcrypt = Bcrypt(app)
 
 user_rooms = {}
@@ -63,6 +65,15 @@ class CustomJSONProvider(JSONProvider):
 
 app.json = CustomJSONProvider(app)
 
+def get_user_id_from_token(token):
+    try:
+        print(f"Token: {token}")  # 토큰이 제대로 전달되는지 확인
+        decoded_token = jwt.decode(token, app.secret_key, algorithms=['HS256'])
+        print(f"Decoded Token: {decoded_token}")  # 디코딩된 토큰 확인
+        return decoded_token.get('user_id')
+    except Exception as e:
+        print(f"Error decoding token: {e}")
+        return None
 
 @app.route('/' , methods=['GET'])
 def render_home():
@@ -71,11 +82,12 @@ def render_home():
         per_page=int(request.args.get('per_page',5))
         skip=(page-1)*per_page
         items = list(db.items.find(
-            {'deletedAt': None}, {'title': 1, 'status':1}).sort([('createdAt',-1)]).skip(skip).limit(per_page))
+            {'deletedAt': None}, {'title': 1, 'status':1,'userId':1}).sort([('createdAt',-1)]).skip(skip).limit(per_page))
 
         for item in items:
-            # todo 토큰 변경 필요
-            item['user_id']="임시 닉네임"
+            user = db.users.find_one({"_id": item['userId']},{'ho':1,'nick':1})
+            print(user['ho'])
+            item['user_id']=user['ho']+" "+user['nick']
 
         total_items = db.items.count_documents({'deletedAt': None})
         total_pages = (total_items + per_page - 1) // per_page  # 총 페이지 수
@@ -97,23 +109,31 @@ def login():
     else:
         user_id = request.json.get('user_id')
         user_pw = request.json.get('password')
-        
+
         user = db.users.find_one({"user_id": user_id})
-        
+        print(user['_id'])
+        print(user['user_id'])
+
         if not user or not bcrypt.check_password_hash(user['password'], user_pw):
             return jsonify({"error": "아이디 또는 비밀번호가 잘못되었습니다."}), 401
-        
+
         # JWT 토큰 생성
         # indenty 속성에 자신이 포장하고 싶은 값을 넣음(보통 식별을 위해 사용자 아이디를 넣어서 토큰을 만든다.)
-        access_token = create_access_token(identity=user_id)
-        
+        access_token = create_access_token(identity=str(user['_id']))
+
         return jsonify({"access_token": access_token}), 200
 
 @app.route('/protected', methods=['GET'])
-@jwt_required()
 def protected():
-    current_user = get_jwt_identity()
-    return jsonify({"logged_in_as": current_user}), 200
+    token = request.headers.get('Authorization')
+    if token:
+            token = token.split("Bearer ")[1]
+            decoded_token= jwt.decode(token, app.secret_key, algorithms=['HS256'])
+            userId=decoded_token.get('sub')
+    else:
+        userId = None
+    return jsonify({"auth": userId}), 200
+
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -175,6 +195,11 @@ def chat_room_list():
     return render_template('chatting_list.html')
 
 
+@app.route('/board/<item_id>', methods=['GET'])
+def render_board_detail():
+    return render_template('board_detail.html')
+
+
 @app.route('/board', methods=['GET'])
 def render_create_board():
     return render_template('create_board.html')
@@ -188,13 +213,11 @@ def detail_board(item_id):
 
         item = db.items.find_one(
             {'_id': ObjectId(item_id), 'deletedAt': None})
-        # todo 토큰으로 변경이 필요합니다.
-        userId="userId"
+
         if item is None:
             return jsonify({'message': 'Item not found'}), 404
-        is_author = str(item['userId']) == userId
 
-        return render_template('board_detail.html',item=item,is_author=is_author, userId="userId['id']")
+        return render_template('board_detail.html',item=item)
     except Exception as e:
         data = {
             "type": "error",
@@ -204,9 +227,12 @@ def detail_board(item_id):
 
 
 @app.route('/api/boards', methods=['POST'])
+@jwt_required()
 def create_board():
     try:
         data = request.json
+
+        userId=get_jwt_identity()
 
         if not data:
             return jsonify({"message": "No data provided"}), 400
@@ -227,7 +253,6 @@ def create_board():
         now = datetime.now(timezone.utc)
         status=RequestStatus.IN_PROGRESS.value
         # todo userId 토큰에서 얻은값으로 변경
-        temporaryId="userId"
 
         result = db.items.insert_one(
             {
@@ -235,7 +260,7 @@ def create_board():
                 'content': data['content'],
                 'price': data['price'],
                 # todo userId 토큰에서 얻은값을 ObjectId로 변경하여 저장
-                'userId':temporaryId,
+                'userId':ObjectId(userId),
                 'status': status,
                 'createdAt': now,
                 'updatedAt': now,
@@ -253,46 +278,56 @@ def create_board():
         return jsonify({'message': 'Server Error'}), 500
 
 
-@app.route('/api/boards/<item_id>', methods=['DELETE'])
-def delete_boards(item_id):
-    try:
-        if not ObjectId.is_valid(item_id):
-            return jsonify({'message': 'Invalid item ID'}), 400
+@app.route('/api/boards/<itemId>', methods=['DELETE'])
+@jwt_required()
+def delete_boards(itemId):
+     try:
+         if not ObjectId.is_valid(itemId):
+             return jsonify({'message': 'Invalid item ID'}), 400
 
-        now = datetime.now(timezone.utc)
+         now = datetime.now(timezone.utc)
 
-        result = db.items.update_one({'_id': ObjectId(item_id), 'deletedAt': None}, {
-            '$set': {
-                'deletedAt': now,
-            }
-        })
+         userId=get_jwt_identity()
 
-        if result.matched_count == 0:
-            return jsonify({"message": "Item not found"}), 404
-        elif result.modified_count == 0:
-            return jsonify({"message": "No changes made to the item"}), 200
-        else:
-            return jsonify({"message": "Item deleted successfully"})
-    except Exception as e:
-        data = {
-            "type": "error",
-            "error_message": str(e),
-        }
-        return jsonify({'message': 'Server Error'}), 500
+         item = db.items.find_one({'_id': ObjectId(itemId), 'deletedAt': None})
 
+         if item['userId'] != ObjectId(userId):
+            return jsonify({'message': 'Unauthorized'}), 403
+
+         result = db.items.update_one({'_id': ObjectId(itemId), 'deletedAt': None}, {
+             '$set': {
+                 'deletedAt': now,
+             }
+         })
+
+         if result.matched_count == 0:
+             return jsonify({"message": "Item not found"}), 404
+         elif result.modified_count == 0:
+             return jsonify({"message": "No changes made to the item"}), 200
+         else:
+             return jsonify({"message": "Item deleted successfully"})
+     except Exception as e:
+         data = {
+             "type": "error",
+             "error_message": str(e),
+         }
+         return jsonify({'message': 'Server Error'}), 500
 
 @app.route('/api/boards/status/<item_id>', methods=['PATCH'])
+@jwt_required()
 def update_status(item_id):
     try:
-        print(item_id)
         if not ObjectId.is_valid(item_id):
             return jsonify({'message': 'Invalid item ID'}), 400
-        print(item_id)
         data = request.json
         if not data:
             return jsonify({"message": "No data provided"}), 400
         now = datetime.now(timezone.utc)
-        print(data.get('status'))
+        userId=get_jwt_identity()
+
+        item = db.items.find_one({'_id': ObjectId(item_id), 'deletedAt': None})
+        if item['userId']!= ObjectId(userId):
+            return jsonify({'message': 'Unauthorized'}), 403
         result = db.items.update_one(
             {'_id': ObjectId(item_id), 'deletedAt': None},
             {
@@ -311,7 +346,6 @@ def update_status(item_id):
             "error_message": str(e),
         }
         return jsonify({'message': 'Server Error'}), 500
-
 
 @app.route('/api/chats', methods=['GET'])
 @jwt_required()
@@ -469,7 +503,6 @@ def authenticated_only(f):
             return
         return f(*args, **kwargs)
     return wrapped
-
 
 @socketio.on('connect')
 @authenticated_only

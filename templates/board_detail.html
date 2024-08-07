@@ -6,6 +6,7 @@ block content %}
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
       },
       body: JSON.stringify({ status: newStatus }),
     })
@@ -21,9 +22,13 @@ block content %}
       });
   }
 
-  function deleteBoard(id) {
-    fetch(`/api/boards/${id}`, {
+  function deleteBoard(itemId) {
+    fetch(`/api/boards/${itemId}`, {
       method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
+      },
     })
       .then((res) => {
         if (!res.ok) {
@@ -36,6 +41,35 @@ block content %}
         alert(e.message);
       });
   }
+
+  window.onload = function () {
+    const itemId = '{{ item["_id"] }}';
+    fetch('/protected', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('인증 실패');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const userId = data.auth;
+        const isAuthor = userId && userId === '{{ item["userId"] }}';
+        if (isAuthor) {
+          document.getElementById('delete-button').style.display = 'block';
+          document.getElementById('complete_status').style.display = 'block';
+          document.getElementById('delete_status').style.display = 'block';
+        }
+      })
+      .catch((e) => {
+        console.error(e.message);
+      });
+  };
 </script>
 <div class="container mx-auto my-8 bg-white p-6 shadow rounded-lg">
   <div class="flex justify-between items-center mb-4">
@@ -62,28 +96,24 @@ block content %}
       >
         채팅
       </button>
-      {% if is_author %} {% if item['status'] == '진행중' %}
+      {% if item['status'] == '진행중' %}
       <button
+        id="complete_status"
         class="px-4 py-2 bg-green-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         onclick="updateStatus('{{ item['_id'] }}', '완료')"
+        style="display: none"
       >
         거래 완료
       </button>
-      {% elif item['status'] == '완료' %}
-      <button
-        class="px-4 py-2 bg-pink-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-        onclick="updateStatus('{{ item['_id'] }}', '진행중')"
-      >
-        거래 취소
-      </button>
       {% endif %}
       <button
+        id="delete-button"
         class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
         onclick="deleteBoard('{{ item['_id'] }}')"
+        style="display: none"
       >
         삭제
       </button>
-      {% endif %}
     </div>
   </div>
 </div>
