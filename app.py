@@ -368,7 +368,7 @@ def list_chats():
                 "$match": {
                     "participants": {
                         "$elemMatch": {
-                            "userId": userId
+                            "userId": ObjectId(userId)
                         }
                     }
                 }
@@ -435,7 +435,7 @@ def create_chat():
             'participants': {
                 '$all': [
                     {'$elemMatch': {'userId': ObjectId(senderId)}},
-                    {'$elemMatch': {'userId': ObjectId(receiverId)}}
+                    {'$elemMatch': {'userId': receiverId}}
                 ]
             }
         })
@@ -449,7 +449,7 @@ def create_chat():
             {
                 'itemId': ObjectId(itemId),
                 'participants': [
-                    {"userId": senderId, "unreadCount": 0},
+                    {"userId": ObjectId(senderId), "unreadCount": 0},
                     {"userId": receiverId, "unreadCount": 0}
                 ],
                 'messages': [],
