@@ -172,7 +172,37 @@ def check_duplicate():
 
 @app.route('/chatting/<room_id>')
 def chat_room(room_id):
-    return render_template('chatting.html', room_id=room_id)
+    result = list(db.chat_rooms.aggregate([
+        {
+                "$match": {
+                    "_id": ObjectId(room_id)
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "items",
+                    "localField": "itemId",
+                    "foreignField": "_id",
+                    "as": "itemData"
+                }
+            },
+            {
+                "$unwind": "$itemData"
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "itemId": 1,
+                    "participants": 1,
+                    "messages": 1,
+                    "createdAt": 1,
+                    "updatedAt": 1,
+                    "itemDetails": "$itemData"
+                }
+            }
+    ]))
+
+    return render_template('chatting.html', room_id=room_id, title=result[0]["itemDetails"]["title"])
 
 
 @app.route('/chatting-list')
