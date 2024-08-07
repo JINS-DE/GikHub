@@ -1,15 +1,6 @@
 {% extends "base.html" %} {% block title %}메인 페이지 - 긱허브{% endblock %}
 {%block content %}
 <script>
-$(document).ready(function() {
-  const token = localStorage.getItem('access_token');
-  if (token!==null) {
-        $('#create_button').show();
-      } else {
-        $('#create_button').hide();
-      }
-});
-
 function goDetail(itemId){
       window.location.href = `/api/boards/${itemId}`;
 }
