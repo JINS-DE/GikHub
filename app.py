@@ -141,28 +141,12 @@ def signup():
     if request.method == 'GET':
         return render_template('signup.html')
     else:
-        name = request.form["name"]
-        ho = request.form["ho"]
-        nick = request.form["nick"]
-        user_id = request.form['user_id']
-        user_pw = request.form['password']
-        confirm_pw = request.form['re_password']
-
-
-        # 비밀번호와 비밀번호 확인이 일치하는지 확인
-        if user_pw != confirm_pw:
-            flash("비밀번호가 일치하지 않습니다.", "error")
-            return redirect(url_for('signup'))
-
-        # 비밀번호 길이 확인
-        if len(user_pw) < 8:
-            flash("패스워드 8자 이상 입력해주세요.", "error")
-            return redirect(url_for('signup'))
-
-        # 사용자 이름 중복 확인
-        if db.users.find_one({'user_id': user_id}):
-            flash("이미 존재하는 아이디입니다.", "error")
-            return redirect(url_for('signup'))
+        data = request.json
+        name = data.get('name')
+        ho = data.get('ho')
+        nick = data.get('nick')
+        user_id = data.get('user_id')
+        user_pw = data.get('password')
 
         # 비밀번호 해싱
         hashed_password = bcrypt.generate_password_hash(user_pw).decode('utf-8')
