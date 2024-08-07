@@ -2,10 +2,18 @@
 {% block content %} {% with messages = get_flashed_messages() %} {% if messages
 %}
 <script>
-  alert('{{ messages[0] }}');
+alert('{{ messages[0] }}');
 </script>
 {% endif %} {% endwith %}
 
+<script>
+  $(document).ready(function() {
+  const token = localStorage.getItem('access_token');
+  if(token!==null){
+    window.location.href = '/'
+  }
+});
+</script>
 <div class="flex items-center justify-center h-screen">
   <div class="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
     <img
