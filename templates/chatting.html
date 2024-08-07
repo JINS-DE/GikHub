@@ -51,6 +51,7 @@
           const newMsgEle = makeItem(data.sid, data.message);
           chatArea.appendChild(newMsgEle);
           console.log(`received: ${JSON.stringify(data)}`);
+          scrollToBottom();
         });
 
         socket.on("join_error", function (data) {
@@ -96,6 +97,11 @@
         }
 
         return item;
+      }
+
+      function scrollToBottom() {
+        const chatArea = document.getElementById("chatArea");
+        chatArea.scrollTop = chatArea.scrollHeight;
       }
     </script>
 
