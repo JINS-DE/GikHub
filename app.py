@@ -66,16 +66,6 @@ class CustomJSONProvider(JSONProvider):
 
 app.json = CustomJSONProvider(app)
 
-def get_user_id_from_token(token):
-    try:
-        print(f"Token: {token}")  # 토큰이 제대로 전달되는지 확인
-        decoded_token = jwt.decode(token, app.secret_key, algorithms=['HS256'])
-        print(f"Decoded Token: {decoded_token}")  # 디코딩된 토큰 확인
-        return decoded_token.get('user_id')
-    except Exception as e:
-        print(f"Error decoding token: {e}")
-        return None
-
 @app.route('/' , methods=['GET'])
 def render_home():
     try:
@@ -87,7 +77,6 @@ def render_home():
 
         for item in items:
             user = db.users.find_one({"_id": item['userId']},{'ho':1,'nick':1})
-            print(user['ho'])
             item['user_id']=user['ho']+" "+user['nick']
 
         total_items = db.items.count_documents({'deletedAt': None})
@@ -100,7 +89,6 @@ def render_home():
             "type": "error",
             "error_message": str(e),
         }
-        print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
 @app.route('/login', methods=['GET','POST'])
@@ -112,8 +100,6 @@ def login():
         user_pw = request.json.get('password')
 
         user = db.users.find_one({"user_id": user_id})
-        print(user['_id'])
-        print(user['user_id'])
 
         if not user or not bcrypt.check_password_hash(user['password'], user_pw):
             return jsonify({"error": "아이디 또는 비밀번호가 잘못되었습니다."}), 401
@@ -130,13 +116,10 @@ def protected():
     if token:
             token = token.split("Bearer ")[1]
             decoded_token= jwt.decode(token, app.secret_key, algorithms=['HS256'])
-            print(decoded_token)
             userId=decoded_token.get('sub')
-            print(userId)
     else:
         userId = None
 
-    print(f"User ID: {userId}")
     return jsonify({"auth": userId}), 200
 
 
@@ -303,7 +286,6 @@ def create_board():
 
         return jsonify({"item_id": result.inserted_id}), 201
     except Exception as e:
-        print(str(e))
         data = {
             "type": "error",
             "error_message": str(e),
@@ -384,9 +366,9 @@ def update_status(item_id):
 def edit_board(item_id):
     try:
         data=request.json
-        title = data.get('title')    
-        content = data.get('content')    
-        price = data.get('price')    
+        title = data.get('title')
+        content = data.get('content')
+        price = data.get('price')
         now = datetime.now(timezone.utc)
         result = db.items.update_one(
              {'_id': ObjectId(item_id), 'deletedAt': None},
@@ -399,7 +381,7 @@ def edit_board(item_id):
             return jsonify({"message": "No changes made to the item"}), 200
         else:
             return jsonify({"message": "Item updated successfully"})
-        
+
     except Exception as e:
          data = {
              "type": "error",
@@ -460,7 +442,6 @@ def list_chats():
 
         return jsonify(items)
     except Exception as e:
-        print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -522,7 +503,6 @@ def create_chat():
 
         return jsonify({'_id': str(result.inserted_id)}), 201
     except Exception as e:
-        print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -564,11 +544,8 @@ def list_chat_message():
             }
         ]))
 
-        # print(result)
-
         return jsonify(result[0])
     except Exception as e:
-        print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -616,7 +593,6 @@ def create_chat_message():
         else:
             return jsonify({'message': 'Item updated successfully'})
     except Exception as e:
-        print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
 
@@ -626,7 +602,6 @@ def authenticated_only(f):
             verify_jwt_in_request()
         except Exception as e:
             disconnect()
-            print(str(e))
             return
         return f(*args, **kwargs)
     return wrapped
@@ -643,7 +618,6 @@ def handle_connect():
 
     user_info[payload['sub']] = {"sid": client_id}
     socket_info[request.sid] = {"userId": payload['sub'], "nick": user["nick"]}
-    print(f'Client connected: {client_id}')
 
 
 @socketio.on('disconnect')
@@ -655,13 +629,11 @@ def handle_disconnect():
     if room:
         leave_room(room)
         del socket_info[client_id]
-    print(f'Client disconnected: {client_id}')
 
 
 @socketio.on('error')
 def handle_error(e):
     client_id = request.sid
-    print(f'An error has occurred on {client_id}: {str(e)}')
 
 
 @socketio.on('join_room')
@@ -669,7 +641,6 @@ def on_join(data):
     room = data['room']
     join_room(room)
     socket_info[request.sid]["room"] = room
-    print(f'User join room: {room}')
 
 
 @socketio.on('leave_room')
@@ -677,7 +648,6 @@ def on_leave(data):
     room = data['room']
     leave_room(room)
     del socket_info[request.sid]["room"]
-    print(f'User left room: {room}')
 
 
 @socketio.on('send_message')
