@@ -91,18 +91,18 @@ block content %}
 
   function updateStatus(itemId, newStatus) {
     fetch(`/api/boards/status/${itemId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("access_token"),
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
       },
       body: JSON.stringify({ status: newStatus }),
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("Internal Error");
+          throw new Error('Internal Error');
         }
-        alert("상태가 업데이트되었습니다.");
+        alert('상태가 업데이트되었습니다.');
         window.location.reload();
       })
       .catch((e) => {
@@ -112,17 +112,17 @@ block content %}
 
   function deleteBoard(itemId) {
     fetch(`/api/boards/${itemId}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("access_token"),
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
       },
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("서버 오류!");
+          throw new Error('서버 오류!');
         }
-        alert("삭제 완료!");
+        alert('삭제 완료!');
         window.location.href = `/`;
       })
       .catch((e) => {
@@ -132,23 +132,25 @@ block content %}
 
   window.onload = function () {
     const itemId = '{{ item["_id"] }}';
-    fetch("/protected", {
-      method: "GET",
+    fetch('/protected', {
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("access_token"),
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
       },
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("인증 실패");
-          const userId = data.auth;
-          const isAuthor = userId && userId === '{{ item["userId"] }}';
-          if (isAuthor) {
-            document.getElementById("delete-button").style.display = "block";
-            document.getElementById("complete_status").style.display = "block";
-            document.getElementById("delete_status").style.display = "block";
-          }
+          throw new Error('인증 실패');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const userId = data.auth;
+        const isAuthor = userId && userId === '{{ item["userId"] }}';
+        if (isAuthor) {
+          document.getElementById('delete-button').style.display = 'block';
+          document.getElementById('complete_status').style.display = 'block';
         }
       })
       .catch((e) => {
@@ -158,10 +160,10 @@ block content %}
 
   function goChatRoom() {
     fetch(`/api/chats`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
       body: JSON.stringify({
         itemId: "{{ item['_id'] }}",
@@ -170,7 +172,7 @@ block content %}
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("서버 오류!");
+          throw new Error('서버 오류!');
         }
         return res.json();
       })

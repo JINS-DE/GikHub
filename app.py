@@ -133,6 +133,8 @@ def protected():
             userId=decoded_token.get('sub')
     else:
         userId = None
+
+    print(f"User ID: {userId}")
     return jsonify({"auth": userId}), 200
 
 
