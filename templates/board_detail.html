@@ -11,7 +11,7 @@ block content %}
         'Authorization': `Bearer ${token}`,
       },
       success: function(data) {
-        const currentUser = data.logged_in_as;
+        const currentUser = data["auth"];
         console.log('현재 로그인된 사용자:', currentUser);
         // 로그인된 사용자 정보와 게시글 작성자(userId) 비교
         const postUserId = "{{ item['userId'] }}"; // 템플릿에서 전달된 사용자 ID
