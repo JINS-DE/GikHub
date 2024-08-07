@@ -195,10 +195,6 @@ def chat_room_list():
     return render_template('chatting_list.html')
 
 
-@app.route('/chatting-list')
-def chat_room_list():
-    return render_template('chatting_list.html')
-
 @app.route('/board/<item_id>', methods=['GET'])
 def render_board_detail():
     return render_template('board_detail.html')
