@@ -14,10 +14,8 @@
       let chatArea;
       let chatMessageBox;
       let currentRoom;
-      let roomSelection;
 
       document.addEventListener("DOMContentLoaded", function () {
-        roomSelection = document.getElementById("roomSelection");
         chatArea = document.getElementById("chatArea");
         chatMessageBox = document.getElementById("chatMessageBox");
         chatMessageBox.addEventListener("keypress", function (event) {
@@ -31,8 +29,7 @@
           transports: ["websocket"],
         });
 
-        currentRoom = "RoomA";
-        roomSelection.value = currentRoom;
+        currentRoom = "{{ room_id }}";
         socket.emit("join_room", { room: currentRoom });
 
         socket.on("connect", function () {
@@ -53,19 +50,12 @@
           console.log(`received: ${JSON.stringify(data)}`);
         });
 
-        socket.on("room_user_count", function (data) {
-          const roomOption = document.querySelector(
-            `#roomSelection option[value='${data.room}']`
-          );
-          roomOption.textContent = `${data.room} (${data.count}/2)`;
-        });
-
         socket.on("join_error", function (data) {
           alert(data.message);
         });
 
         socket.on("error", function (data) {
-          alert("Error: " + data.message); // 오류 메시지를 알림으로 표시
+          alert("Error: " + data.message);
         });
       });
 
@@ -74,17 +64,6 @@
           socket.disconnect();
         }
       });
-
-      function switchRoom() {
-        let selectedRoom = roomSelection.value;
-        if (socket && socket.connected) {
-          socket.emit("leave_room", { room: currentRoom });
-          socket.emit("join_room", { room: selectedRoom });
-          currentRoom = selectedRoom;
-          console.log(`Switched to room: ${selectedRoom}`);
-          chatArea.innerHTML = "";
-        }
-      }
 
       function sendMessage() {
         var msg = chatMessageBox.value;
@@ -148,20 +127,8 @@
         </button>
       </div>
       <div class="bg-white shadow rounded-lg p-6 w-full max-w-md">
-        <!-- 방 선택 드롭다운 -->
-        <div class="mb-4">
-          <select
-            id="roomSelection"
-            class="border p-2 rounded-lg"
-            onchange="switchRoom()"
-          >
-            <option value="RoomA">Room A (0/2)</option>
-            <option value="RoomB">Room B (0/2)</option>
-            <option value="RoomC">Room C (0/2)</option>
-          </select>
-        </div>
         <!-- 채팅방 제목 -->
-        <div class="text-2xl font-semibold mb-4">전체 채팅방 테스트</div>
+        <div class="text-2xl font-semibold mb-4">{{ room_id }}</div>
         <!-- 채팅 메시지 영역 -->
         <div id="chatArea" class="overflow-y-auto h-64 mb-4 p-2 space-y-2">
           <!-- 여러 채팅 메시지 -->
