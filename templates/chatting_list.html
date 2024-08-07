@@ -10,7 +10,64 @@
       crossorigin="anonymous"
     ></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {});
+      let accessToken;
+      document.addEventListener("DOMContentLoaded", function () {
+        showItems();
+      });
+
+      function showItems() {
+        const roomList = document.getElementById("room-list");
+        roomList.innerHTML = "";
+
+        const fragment = document.createDocumentFragment();
+        fetch(`/api/chats`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("서버 오류!");
+            }
+            return res.json();
+          })
+          .then((data) => {
+            for (let i = 0; i < data.length; i++) {
+              const cardElement = makeItem(
+                data[i]._id,
+                data[i].itemDetails.title
+              );
+              fragment.appendChild(cardElement);
+            }
+            roomList.appendChild(fragment);
+          });
+      }
+
+      function makeItem(id, title) {
+        const item = document.createElement("li");
+        item.innerHTML = `<li>
+                            <a
+                              href="/chatting/${id}"
+                              class="block hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition duration-150 ease-in-out"
+                            >
+                              <div class="px-4 py-4 flex items-center sm:px-6">
+                                <div
+                                  class="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between"
+                                >
+                                  <div>
+                                    <div
+                                      class="text-sm leading-5 font-medium text-indigo-600 truncate"
+                                    >
+                                      ${title}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </a>
+                          </li>`;
+        return item;
+      }
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -31,7 +88,6 @@
     <title>Gikhub</title>
   </head>
   <body class="bg-gray-100">
-    <!-- Back Button -->
     <div class="container mx-auto px-4 py-2">
       <button
         onclick="history.back()"
@@ -43,36 +99,7 @@
 
     <div class="container mx-auto px-4 py-3">
       <div class="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul>
-          <li>
-            <a
-              href="#"
-              class="block hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition duration-150 ease-in-out"
-            >
-              <div class="px-4 py-4 flex items-center sm:px-6">
-                <div
-                  class="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <div
-                      class="text-sm leading-5 font-medium text-indigo-600 truncate"
-                    >
-                      Room Name #1
-                    </div>
-                    <div class="mt-2 sm:flex">
-                      <div class="sm:flex">
-                        <div class="text-sm leading-5 text-gray-500">
-                          Last message preview here...
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </a>
-          </li>
-          <!-- Repeat for more chat rooms -->
-        </ul>
+        <ul id="room-list"></ul>
       </div>
     </div>
   </body>

@@ -2,17 +2,16 @@ from flask import Flask, jsonify, render_template, request,redirect, flash, url_
 from flask.json.provider import JSONProvider
 from bson import ObjectId
 from pymongo import MongoClient
-import socketio
 from enum import Enum
 import certifi
-from flask_socketio import SocketIO, join_room, leave_room, send, emit
+from flask_socketio import SocketIO, join_room, leave_room, send, emit, disconnect
 import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime, timezone, timedelta
 # JWT
 import jwt
-from flask_jwt_extended import JWTManager, create_access_token,jwt_required,get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
 
 # 해쉬
 from flask_bcrypt import Bcrypt
@@ -30,7 +29,6 @@ app.secret_key = 'gikhub'
 jwtManager = JWTManager(app)
 bcrypt = Bcrypt(app)
 
-room_user_counts = {}
 user_rooms = {}
 ca = certifi.where()
 environment = os.getenv('ENVIRONMENT', 'production')
@@ -42,9 +40,8 @@ else:
     client = MongoClient(os.getenv('MONGODB_URI'), tlsCAFile=ca)
 
 
-socketio = SocketIO(app)
-
 db = client.gikhub
+
 
 class RequestStatus(Enum):
     IN_PROGRESS = "진행중"
@@ -138,6 +135,7 @@ def protected():
     return jsonify({"auth": userId}), 200
 
 
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'GET':
@@ -187,9 +185,14 @@ def check_duplicate():
     return jsonify({'exists': user_exists})
 
 
-@app.route('/chatting')
-def chat_room():
-    return render_template('chatting.html')
+@app.route('/chatting/<room_id>')
+def chat_room(room_id):
+    return render_template('chatting.html', room_id=room_id)
+
+
+@app.route('/chatting-list')
+def chat_room_list():
+    return render_template('chatting_list.html')
 
 
 @app.route('/chatting-list')
@@ -313,7 +316,6 @@ def delete_boards(itemId):
              "error_message": str(e),
          }
          return jsonify({'message': 'Server Error'}), 500
-
 
 @app.route('/api/boards/status/<item_id>', methods=['PATCH'])
 @jwt_required()
@@ -494,7 +496,20 @@ def create_chat_message():
         print(str(e))
         return jsonify({'message': 'Server Error'}), 500
 
+
+def authenticated_only(f):
+    def wrapped(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+        except Exception as e:
+            disconnect()
+            print(str(e))
+            return
+        return f(*args, **kwargs)
+    return wrapped
+
 @socketio.on('connect')
+@authenticated_only
 def handle_connect():
     client_id = request.sid
     print(f'Client connected: {client_id}')
@@ -503,11 +518,9 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     client_id = request.sid
-    room = user_rooms.get(client_id)  # 연결이 끊긴 유저의 방 정보 가져오기
+    room = user_rooms.get(client_id)
     if room:
         leave_room(room)
-        room_user_counts[room] = room_user_counts.get(room, 1) - 1
-        emit('room_user_count', {'room': room, 'count': room_user_counts[room]}, broadcast=True)
         del user_rooms[client_id]
     print(f'Client disconnected: {client_id}')
 
@@ -521,21 +534,14 @@ def handle_error(e):
 @socketio.on('join_room')
 def on_join(data):
     room = data['room']
-    if room_user_counts.get(room, 0) < 2:  # 방의 최대 인원은 2명
-        join_room(room)
-        room_user_counts[room] = room_user_counts.get(room, 0) + 1
-        user_rooms[request.sid] = room
-        emit('room_user_count', {'room': room, 'count': room_user_counts[room]}, broadcast=True)
-    else:
-        emit('join_error', {'message': 'This room is full.'})  # 방이 가득 찼을 때 클라이언트에게 에러 메시지 전송
+    join_room(room)
+    user_rooms[request.sid] = room
 
 
 @socketio.on('leave_room')
 def on_leave(data):
     room = data['room']
     leave_room(room)
-    room_user_counts[room] = room_user_counts.get(room, 1) - 1
-    emit('room_user_count', {'room': room, 'count': room_user_counts[room]}, broadcast=True)
     del user_rooms[request.sid]
     print(f'User left room: {room}')
 
@@ -543,7 +549,7 @@ def on_leave(data):
 @socketio.on('send_message')
 def handle_send_message(data):
     client_id = request.sid
-    room = user_rooms.get('room')
+    room = user_rooms.get(client_id)
     if room:
         emit('reply', {"sid": client_id, "message": data["message"]}, room=room)
         print(f'Received message: {data["message"]} from {client_id} in room {room}')
