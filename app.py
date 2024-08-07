@@ -218,7 +218,9 @@ def detail_board(item_id):
             {'_id': ObjectId(item_id), 'deletedAt': None})
 
         user = db.users.find_one({"_id": item['userId']},{'ho':1,'nick':1})
+        item['user_id']=item['userId']
         item['userId']=user['ho']+"호 "+user['nick']
+
 
         if item is None:
             return jsonify({'message': 'Item not found'}), 404
