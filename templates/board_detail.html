@@ -1,32 +1,9 @@
 {% extends "base.html" %} {% block title %}게시물 상세 - 긱허브{% endblock %} {%
 block content %}
 <script>
-  $(document).ready(function() {
-    const token = localStorage.getItem('access_token');
-
-    $.ajax({
-      url: '/protected',
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      success: function(data) {
-        const currentUser = data["auth"];
-        console.log('현재 로그인된 사용자:', currentUser);
-        // 로그인된 사용자 정보와 게시글 작성자(userId) 비교
-        const postUserId = "{{ item['userId'] }}"; // 템플릿에서 전달된 사용자 ID
-        if (currentUser === postUserId) {
-          $('#edit_button').show(); // 수정 버튼 보이기
-        } else {
-          $('#edit_button').hide(); // 수정 버튼 숨기기
-        }
-      },
-      
-    });
-  });
-  function update_board(){
-    $("#wrap").html("")
-    $("#wrap").html(`<h2 class="text-2xl font-bold mb-4">물품 요청 글 수정</h2>
+  function update_board() {
+    $('#wrap').html('');
+    $('#wrap').html(`<h2 class="text-2xl font-bold mb-4">물품 요청 글 수정</h2>
   <form id="create_post_form">
     <div class="mb-4">
       <label for="title" class="block text-gray-700">제목</label>
@@ -69,40 +46,40 @@ block content %}
         저장하기
       </button>
     </div>
-  </form>`)
+  </form>`);
   }
-  function edit_board(itemId){
-    let title=$("#title").val()
-    let content=$("#content").val()
-    let price=$("#price").val()
+  function edit_board(itemId) {
+    let title = $('#title').val();
+    let content = $('#content').val();
+    let price = $('#price').val();
     $.ajax({
-      url : `/api/boards/edit/${itemId}`,
-      method : 'PATCH',
+      url: `/api/boards/edit/${itemId}`,
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+        Authorization: 'Bearer ' + localStorage.getItem('access_token'),
       },
-      data : JSON.stringify({ 'title': title,'content':content,'price':price}),
-      success:function(data){
-        alert(data['message'])
-      }
-    })
+      data: JSON.stringify({ title: title, content: content, price: price }),
+      success: function (data) {
+        alert(data['message']);
+      },
+    });
   }
 
   function updateStatus(itemId, newStatus) {
     fetch(`/api/boards/status/${itemId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("access_token"),
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
       body: JSON.stringify({ status: newStatus }),
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("Internal Error");
+          throw new Error('Internal Error');
         }
-        alert("상태가 업데이트되었습니다.");
+        alert('상태가 업데이트되었습니다.');
         window.location.reload();
       })
       .catch((e) => {
@@ -112,17 +89,17 @@ block content %}
 
   function deleteBoard(itemId) {
     fetch(`/api/boards/${itemId}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("access_token"),
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("서버 오류!");
+          throw new Error('서버 오류!');
         }
-        alert("삭제 완료!");
+        alert('삭제 완료!');
         window.location.href = `/`;
       })
       .catch((e) => {
@@ -132,23 +109,26 @@ block content %}
 
   window.onload = function () {
     const itemId = '{{ item["_id"] }}';
-    fetch("/protected", {
-      method: "GET",
+    fetch('/protected', {
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("access_token"),
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("인증 실패");
-          const userId = data.auth;
-          const isAuthor = userId && userId === '{{ item["userId"] }}';
-          if (isAuthor) {
-            document.getElementById("delete-button").style.display = "block";
-            document.getElementById("complete_status").style.display = "block";
-            document.getElementById("delete_status").style.display = "block";
-          }
+          throw new Error('인증 실패');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const userId = data.auth;
+        const isAuthor = userId && userId === '{{ item["userId"] }}';
+        if (isAuthor) {
+          document.getElementById('delete-button').style.display = 'block';
+          document.getElementById('complete_status').style.display = 'block';
+          document.getElementById('edit_button').style.display = 'block';
         }
       })
       .catch((e) => {
@@ -158,10 +138,10 @@ block content %}
 
   function goChatRoom() {
     fetch(`/api/chats`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
       body: JSON.stringify({
         itemId: "{{ item['_id'] }}",
@@ -170,7 +150,7 @@ block content %}
     })
       .then((res) => {
         if (!res.ok) {
-          throw new Error("서버 오류!");
+          throw new Error('서버 오류!');
         }
         return res.json();
       })
@@ -204,15 +184,6 @@ block content %}
       </p>
     </div>
     <div class="flex justify-end">
-  <button
-    id="edit_button"
-    class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ml-2"
-    style="display: none;" 
-    onclick="update_board()"
-  >
-    수정하기
-  </button>
-      
       <button
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         onclick="goChatRoom()"
@@ -222,7 +193,7 @@ block content %}
       {% if item['status'] == '진행중' %}
       <button
         id="complete_status"
-        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ml-2"
         onclick="updateStatus('{{ item['_id'] }}', '완료')"
         style="display: none"
       >
@@ -230,8 +201,16 @@ block content %}
       </button>
       {% endif %}
       <button
+        id="edit_button"
+        class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ml-2"
+        style="display: none"
+        onclick="update_board()"
+      >
+        수정하기
+      </button>
+      <button
         id="delete-button"
-        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ml-2"
         onclick="deleteBoard('{{ item['_id'] }}')"
         style="display: none"
       >
