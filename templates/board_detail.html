@@ -84,7 +84,7 @@ block content %}
       },
       data : JSON.stringify({ 'title': title,'content':content,'price':price}),
       success:function(data){
-        console.log(data['message'])
+        alert(data['message'])
       }
     })
   }
