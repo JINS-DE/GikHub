@@ -404,6 +404,7 @@ def list_chats():
 
 
 @app.route('/api/chats', methods=['POST'])
+@jwt_required()
 def create_chat():
     try:
         data = request.json
@@ -412,8 +413,13 @@ def create_chat():
             return jsonify({'message': 'No data provided'}), 400
 
         itemId = data.get('itemId')
-        senderId = data.get('senderId')
-        receiverId = data.get('receiverId')
+
+        item = db.items.find_one(
+            {'_id': ObjectId(itemId), 'deletedAt': None})
+
+
+        senderId = get_jwt_identity()
+        receiverId = item.get('userId')
 
         if not itemId:
             return jsonify({"message": "Missing 'itemId' in request"}), 400
@@ -423,6 +429,19 @@ def create_chat():
 
         if not receiverId:
             return jsonify({"message": "Missing 'receiverId' in request"}), 400
+
+        existing_room = db.chat_rooms.find_one({
+            'itemId': ObjectId(itemId),
+            'participants': {
+                '$all': [
+                    {'$elemMatch': {'userId': ObjectId(senderId)}},
+                    {'$elemMatch': {'userId': ObjectId(receiverId)}}
+                ]
+            }
+        })
+
+        if existing_room:
+            return jsonify({'message': 'Chat room already exists', '_id': str(existing_room['_id'])}), 200
 
         now = datetime.now(timezone.utc)
 
@@ -447,6 +466,7 @@ def create_chat():
 
 
 @app.route('/api/chat/messages', methods=['POST'])
+@jwt_required()
 def create_chat_message():
     try:
         data = request.json
