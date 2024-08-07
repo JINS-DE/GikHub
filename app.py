@@ -29,7 +29,9 @@ app.secret_key = 'gikhub'
 jwtManager = JWTManager(app)
 bcrypt = Bcrypt(app)
 
-user_rooms = {}
+user_info = {}
+socket_info = {}
+
 ca = certifi.where()
 environment = os.getenv('ENVIRONMENT', 'production')
 if environment == 'production':
@@ -479,6 +481,52 @@ def create_chat():
         return jsonify({'message': 'Server Error'}), 500
 
 
+@app.route('/api/chat/messages', methods=['GET'])
+@jwt_required()
+def list_chat_message():
+    try:
+        roomId = request.args.get('room')
+        # result = db.chat_rooms.find_one({'_id': ObjectId(roomId), 'deletedAt': None})
+        result = list(db.chat_rooms.aggregate([
+            {
+                "$match": {
+                    "_id": ObjectId(roomId)
+                }
+            },
+            {
+                "$unwind": "$participants"
+            },
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "participants.userId",
+                    "foreignField": "_id",
+                    "as": "participantDetails"
+                }
+            },
+            {
+                "$unwind": "$participantDetails"
+            },
+            {
+                "$group": {
+                    "_id": "$_id",
+                    "participants": { "$push": "$participantDetails" },
+                    "messages": { "$first": "$messages" },
+                    "createdAt": { "$first": "$createdAt" },
+                    "updatedAt": { "$first": "$updatedAt" },
+                    "deletedAt": { "$first": "$deletedAt" }
+                }
+            }
+        ]))
+
+        # print(result)
+
+        return jsonify(result[0])
+    except Exception as e:
+        print(str(e))
+        return jsonify({'message': 'Server Error'}), 500
+
+
 @app.route('/api/chat/messages', methods=['POST'])
 @jwt_required()
 def create_chat_message():
@@ -542,16 +590,26 @@ def authenticated_only(f):
 @authenticated_only
 def handle_connect():
     client_id = request.sid
+    token = request.headers.get('Authorization')
+    token = token.split()[1]
+    payload = jwt.decode(token, 'gikhub', algorithms=['HS256'])
+
+    user = db.users.find_one({"_id": ObjectId(payload['sub'])})
+
+    user_info[payload['sub']] = {"sid": client_id}
+    socket_info[request.sid] = {"userId": payload['sub'], "nick": user["nick"]}
     print(f'Client connected: {client_id}')
 
 
 @socketio.on('disconnect')
 def handle_disconnect():
     client_id = request.sid
-    room = user_rooms.get(client_id)
+    del socket_info[request.sid]
+
+    room = socket_info.get(client_id).get("room")
     if room:
         leave_room(room)
-        del user_rooms[client_id]
+        del socket_info[client_id]
     print(f'Client disconnected: {client_id}')
 
 
@@ -565,23 +623,38 @@ def handle_error(e):
 def on_join(data):
     room = data['room']
     join_room(room)
-    user_rooms[request.sid] = room
+    socket_info[request.sid]["room"] = room
+    print(f'User join room: {room}')
 
 
 @socketio.on('leave_room')
 def on_leave(data):
     room = data['room']
     leave_room(room)
-    del user_rooms[request.sid]
+    del socket_info[request.sid]["room"]
     print(f'User left room: {room}')
 
 
 @socketio.on('send_message')
 def handle_send_message(data):
     client_id = request.sid
-    room = user_rooms.get(client_id)
+    room = socket_info.get(client_id).get("room")
+    userId = socket_info[request.sid]["userId"]
+    nick = socket_info.get(client_id).get("nick")
     if room:
-        emit('reply', {"sid": client_id, "message": data["message"]}, room=room)
+        db.chat_rooms.update_one(
+            { '_id': ObjectId(room) },
+            {
+                '$push': {
+                    'messages': {
+                        'userId': ObjectId(userId),
+                        'message': data["message"],
+                        'createdAt': datetime.now(timezone.utc)
+                    }
+                }
+            }
+        )
+        emit('reply', {"sid": client_id, "message": data["message"], "userId": userId, "nick": nick}, room=room)
         print(f'Received message: {data["message"]} from {client_id} in room {room}')
     else:
         emit('error', {'message': 'No room specified'}, to=client_id)
