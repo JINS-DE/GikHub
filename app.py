@@ -208,7 +208,7 @@ def render_create_board():
     return render_template('create_board.html')
 
 
-@app.route('/api/boards/<item_id>', methods=['GET'])
+@app.route('/boards/<item_id>', methods=['GET'])
 def detail_board(item_id):
     try:
         if not ObjectId.is_valid(item_id):
@@ -509,7 +509,6 @@ def create_chat():
         return jsonify({'_id': str(result.inserted_id)}), 201
     except Exception as e:
         return jsonify({'message': 'Server Error'}), 500
-
 
 @app.route('/api/chat/messages', methods=['GET'])
 @jwt_required()
