@@ -11,7 +11,7 @@ import json
 from datetime import datetime, timezone, timedelta
 # JWT
 import jwt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request,create_refresh_token
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
 
 # 해쉬
 from flask_bcrypt import Bcrypt
