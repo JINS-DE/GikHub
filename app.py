@@ -20,11 +20,11 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 # JWT 설정 (JWT 비밀 키 설정, 만료시간)
-app.config['JWT_SECRET_KEY'] = 'gikhub'
+app.config["JWT_SECRET_KEY"] = os.getenv('secret_key')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1) # 토큰 만료 시간 1시간
 
 # secret_key를 선언하여 html (front end)와 flask 사이flash 메세지 전달을 암호화
-app.secret_key = 'gikhub'
+app.secret_key = os.getenv('secret_key')
 # JWTManager 및 Bcrypt 인스턴스 초기화
 jwtManager = JWTManager(app)
 bcrypt = Bcrypt(app)
